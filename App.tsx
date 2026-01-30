@@ -18,7 +18,8 @@ import {
   Eye,
   ArrowLeft,
   Sparkles,
-  Video
+  Video,
+  MessageSquare
 } from 'lucide-react';
 import { ProductProject, ProjectStatus, ProjectConfig, AIProvider } from './types';
 import Dashboard from './components/Dashboard';
@@ -37,11 +38,11 @@ const Sidebar = ({ projects }: { projects: ProductProject[] }) => {
       <div className="p-8">
         <div className="flex items-center gap-3 text-violet-600 font-black text-2xl tracking-tight">
           <div className="purple-gradient-btn p-2 rounded-2xl text-white shadow-lg gold-border-glow">
-            <Sparkles size={24} />
+            <MessageSquare size={24} />
           </div>
           <div className="flex flex-col leading-none">
-            <span className="text-slate-800">SmartGuide</span>
-            <span className="text-[10px] text-amber-500 uppercase font-black tracking-[0.2em] mt-1">AI Platform</span>
+            <span className="text-slate-800">AI虚拟客服</span>
+            <span className="text-[10px] text-amber-500 uppercase font-black tracking-[0.2em] mt-1">AI Service</span>
           </div>
         </div>
       </div>

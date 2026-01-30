@@ -1,5 +1,5 @@
 {
-  "name": "SmartGuide AI",
+  "name": "AI虚拟客服",
   "description": "An intelligent product service platform for merchants to create interactive AI-driven guides, knowledge bases, and voice assistants accessible via QR codes.",
   "requestFramePermissions": [
     "camera",

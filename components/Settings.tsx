@@ -282,7 +282,7 @@ const Settings: React.FC = () => {
              <h4 className="text-lg font-black text-white">密钥安全与环境映射 <span className="text-amber-500">Security</span></h4>
           </div>
           <div className="space-y-6 text-sm text-slate-400 font-medium leading-relaxed">
-            <p>SmartGuide AI 采用<b>动态环境代理机制</b>，您的 API 密钥（Zhipu）通过后端环境变量安全挂载，前端不保留任何敏感明文。系统会自动路由至最佳响应节点。</p>
+            <p>AI虚拟客服 采用<b>动态环境代理机制</b>，您的 API 密钥（Zhipu）通过后端环境变量安全挂载，前端不保留任何敏感明文。系统会自动路由至最佳响应节点。</p>
             <div className="p-6 bg-black/30 rounded-2xl border border-white/5 font-mono text-[11px] text-emerald-400/80">
               $ route_ai_request --target=zhipu <br/>
               [SYSTEM] Checking Zhipu China Health... OK (18ms) <br/>
