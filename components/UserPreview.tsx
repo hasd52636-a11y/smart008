@@ -57,64 +57,106 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
   const animationFrameRef = useRef<number>();
   const videoStreamRef = useRef<MediaStream | null>(null);
 
+  // 清理视频聊天函数（移到最前面，确保在useEffect中被调用时已定义）
+  const cleanupVideoChat = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    
+    if (videoStreamRef.current) {
+      videoStreamRef.current.getTracks().forEach(track => track.stop());
+    }
+    
+    aiService.disconnectFromRealtime();
+    setIsVideoChatActive(false);
+    setVideoStream(null);
+    setIsConnected(false);
+    setConnectionStatus('disconnected');
+    setAnnotations([]);
+  };
+
   // 从服务端加载项目数据
   useEffect(() => {
+    console.log('=== 扫码流程开始 ===');
+    console.log('当前projectId:', projectId);
+    console.log('当前project状态:', project);
+    console.log('当前projectLoading状态:', projectLoading);
+    console.log('当前projectError状态:', projectError);
+    
     const loadProject = async () => {
-      console.log('开始加载项目:', projectId);
+      console.log('1. 开始加载项目:', projectId);
       if (!projectId) {
-        console.log('项目ID为空');
+        console.log('2. 项目ID为空');
         setProjectError('无效的项目ID');
         setProjectLoading(false);
+        console.log('3. 处理空项目ID完成');
         return;
       }
 
       try {
+        console.log('4. 设置加载状态为true');
         setProjectLoading(true);
-        console.log('验证项目ID:', projectId);
+        console.log('5. 验证项目ID:', projectId);
         
         // 验证项目ID并获取项目数据
+        console.log('6. 调用projectService.validateProjectId');
         const validation = await projectService.validateProjectId(projectId);
-        console.log('验证结果:', validation);
+        console.log('7. 验证结果:', validation);
         
         if (!validation.valid) {
-          console.log('项目验证失败:', validation.error);
+          console.log('8. 项目验证失败:', validation.error);
           setProjectError(validation.error || '项目验证失败');
           setProjectLoading(false);
+          console.log('9. 处理验证失败完成');
           return;
         }
 
-        console.log('项目验证成功:', validation.project);
+        console.log('10. 项目验证成功:', validation.project);
         const validatedProject = validation.project!;
-        setProject(validatedProject);
         
         // 检查知识库
         if (validatedProject.knowledgeBase && validatedProject.knowledgeBase.length > 0) {
-          console.log('知识库加载成功:', validatedProject.knowledgeBase.length, '条条目');
+          console.log('11. 知识库加载成功:', validatedProject.knowledgeBase.length, '条条目');
         } else {
-          console.log('知识库为空，使用默认知识');
+          console.log('11. 知识库为空，使用默认知识');
         }
         
-        // 初始化messages状态
-        setMessages([
-          { 
-            role: 'assistant', 
-            text: `您好！我是 ${validatedProject.name} 的 AI 专家。我已经加载了最新的产品说明书和视频教程，请问有什么可以帮您？` 
-          }
-        ]);
-        
         // 记录用户访问（匿名统计）
+        console.log('12. 记录用户访问');
         await projectService.logUserAccess(projectId, {
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
           referrer: document.referrer
         });
         
-        console.log('项目加载完成，准备提供服务');
-        setProjectLoading(false);
+        console.log('13. 项目加载完成，准备更新状态');
+        
+        // 确保状态更新顺序：先设置项目数据，再关闭加载状态
+        setTimeout(() => {
+          console.log('14. 开始更新状态...');
+          console.log('14.1 设置project状态:', validatedProject.id, validatedProject.name);
+          setProject(validatedProject);
+          
+          // 初始化messages状态
+          const welcomeMessage = `您好！我是 ${validatedProject.name} 的 AI 专家。我已经加载了最新的产品说明书和视频教程，请问有什么可以帮您？`;
+          console.log('14.2 设置欢迎消息:', welcomeMessage);
+          setMessages([
+            { 
+              role: 'assistant', 
+              text: welcomeMessage 
+            }
+          ]);
+          
+          console.log('14.3 设置projectLoading为false');
+          setProjectLoading(false);
+          console.log('15. 状态更新完成，项目已就绪');
+          console.log('=== 扫码流程结束 ===');
+        }, 100);
       } catch (error) {
-        console.error('Failed to load project:', error);
+        console.error('16. 加载项目失败:', error);
         setProjectError('加载项目信息失败，请稍后重试');
         setProjectLoading(false);
+        console.log('17. 处理错误完成');
       }
     };
 
@@ -133,6 +175,18 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
     };
     
     initializeAIService();
+  }, []);
+
+  // 滚动到最新消息
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, isTyping]);
+
+  // 清理视频聊天
+  useEffect(() => {
+    return () => {
+      cleanupVideoChat();
+    };
   }, []);
 
   // 项目加载中
@@ -219,16 +273,6 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
       </div>
     );
   }
-
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, isTyping]);
-
-  useEffect(() => {
-    return () => {
-      cleanupVideoChat();
-    };
-  }, []);
 
   // 项目验证已经在前面的逻辑中处理，移除重复的检查
   // 确保project存在后再渲染后续内容
@@ -476,23 +520,6 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
     if (newAnnotation) {
       setAnnotations(prev => [...prev, newAnnotation]);
     }
-  };
-
-  const cleanupVideoChat = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
-    if (videoStreamRef.current) {
-      videoStreamRef.current.getTracks().forEach(track => track.stop());
-    }
-    
-    aiService.disconnectFromRealtime();
-    setIsVideoChatActive(false);
-    setVideoStream(null);
-    setIsConnected(false);
-    setConnectionStatus('disconnected');
-    setAnnotations([]);
   };
 
   const handleSend = async (text?: string, image?: string) => {
@@ -770,7 +797,7 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
   };
 
   return (
-    <div className="flex flex-col h-screen w-full max-w-lg mx-auto bg-[#0a0c10] shadow-2xl relative overflow-hidden font-sans border-x border-white/5">
+    <div className="flex flex-col h-screen w-full max-w-lg mx-auto bg-[#12151b] shadow-2xl relative overflow-hidden font-sans border-x border-white/10">
       {/* Video chat interface */}
       {isVideoChatActive && (
         <div className="absolute inset-0 z-50 bg-[#0a0c10] flex flex-col">

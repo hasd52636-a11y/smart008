@@ -210,25 +210,6 @@ const App: React.FC = () => {
     }
   };
 
-  const toggleProjectStatus = async (id: string) => {
-    const project = projects.find(p => p.id === id);
-    if (project) {
-      const updatedProject = {
-        ...project,
-        status: project.status === ProjectStatus.ACTIVE ? ProjectStatus.DRAFT : ProjectStatus.ACTIVE,
-        updatedAt: new Date().toISOString()
-      };
-      await updateProject(updatedProject);
-    }
-  };
-
-  const deleteProject = async (id: string) => {
-    const success = await projectService.deleteProject(id);
-    if (success) {
-      setProjects(projects.filter(p => p.id !== id));
-    }
-  };
-
   return (
     <Router>
       <div className="flex min-h-screen">
@@ -280,7 +261,7 @@ const App: React.FC = () => {
                 <main className="p-12 pb-24">
                   <Routes>
                     <Route path="/dashboard" element={<Dashboard projects={projects} />} />
-                    <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} onToggleStatus={toggleProjectStatus} onDelete={deleteProject} />} />
+                    <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} />} />
                     <Route path="/projects/:id" element={<ProjectDetail projects={projects} onUpdate={updateProject} />} />
                     <Route path="/analytics" element={<Analytics />} />
                     <Route path="/settings" element={<Settings />} />
@@ -326,7 +307,7 @@ const App: React.FC = () => {
                 <main className="p-12 pb-24">
                   <Routes>
                     <Route path="/" element={<Dashboard projects={projects} />} />
-                    <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} onToggleStatus={toggleProjectStatus} onDelete={deleteProject} />} />
+                    <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} />} />
                     <Route path="/projects/:id" element={<ProjectDetail projects={projects} onUpdate={updateProject} />} />
                     <Route path="/analytics" element={<Analytics />} />
                     <Route path="/settings" element={<Settings />} />
