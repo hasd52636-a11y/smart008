@@ -89,7 +89,8 @@ const App: React.FC = () => {
           provider: AIProvider.GEMINI,
           videoGuides: [],
           ...p.config
-        }
+        },
+        knowledgeBase: p.knowledgeBase || []
       }));
     }
     return [
