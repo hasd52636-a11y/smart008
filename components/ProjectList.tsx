@@ -9,15 +9,20 @@ import {
   Package, 
   ExternalLink,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Power,
+  PowerOff,
+  Trash2
 } from 'lucide-react';
 
 interface ProjectListProps {
   projects: ProductProject[];
   onAdd: (name: string, description: string) => void;
+  onToggleStatus: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-const ProjectList: React.FC<ProjectListProps> = ({ projects, onAdd }) => {
+const ProjectList: React.FC<ProjectListProps> = ({ projects, onAdd, onToggleStatus, onDelete }) => {
   const [showModal, setShowModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -53,7 +58,12 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onAdd }) => {
           <div 
             key={project.id} 
             className="glass-card rounded-[2.5rem] border border-slate-200 hover:border-violet-500/30 transition-all cursor-pointer group flex flex-col relative overflow-hidden"
-            onClick={() => navigate(`/projects/${project.id}`)}
+            onClick={(e) => {
+              // 只有当点击的不是按钮时才导航
+              if (!(e.target as HTMLElement).closest('button')) {
+                navigate(`/projects/${project.id}`);
+              }
+            }}
           >
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-pink-500/10 blur-[60px]"></div>
             
@@ -68,9 +78,43 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onAdd }) => {
                   }`}>
                     {project.status === 'active' ? 'Active 在线' : 'Draft 草稿'}
                   </span>
-                  <button className="text-slate-500 hover:text-violet-600 transition-colors">
-                    <MoreVertical size={22} />
-                  </button>
+                  
+                  {/* 产品控制按钮组 */}
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 relative z-10">
+                    {/* 启用/关闭按钮 */}
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Toggle status clicked for project:', project.id);
+                        onToggleStatus(project.id);
+                      }}
+                      className={`p-2 rounded-xl transition-all relative z-20 ${
+                        project.status === ProjectStatus.ACTIVE 
+                          ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white' 
+                          : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white'
+                      }`}
+                      title={project.status === ProjectStatus.ACTIVE ? '关闭产品' : '启用产品'}
+                    >
+                      {project.status === ProjectStatus.ACTIVE ? <PowerOff size={16} /> : <Power size={16} />}
+                    </button>
+                    
+                    {/* 删除按钮 */}
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Delete clicked for project:', project.id);
+                        if (window.confirm(`确定要删除产品 "${project.name}" 吗？此操作不可撤销。`)) {
+                          onDelete(project.id);
+                        }
+                      }}
+                      className="p-2 rounded-xl bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white transition-all relative z-20"
+                      title="删除产品"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
               

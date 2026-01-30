@@ -16,11 +16,53 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
   const [project, setProject] = useState<ProductProject | null>(null);
   const [projectLoading, setProjectLoading] = useState(true);
   const [projectError, setProjectError] = useState<string>('');
+  
+  // 所有状态初始化移到组件顶层
+  const [messages, setMessages] = useState<{role: 'user' | 'assistant', text: string, image?: string}[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<string | null>(null);
+  const [streamingMessage, setStreamingMessage] = useState<string | null>(null);
+  const [streamingId, setStreamingId] = useState<number | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
+  const [ocrResult, setOcrResult] = useState<string>('');
+  const [ocrImage, setOcrImage] = useState<string | null>(null);
+  const [ocrMessage, setOcrMessage] = useState({ type: 'info' as 'info' | 'success' | 'error', text: '' });
+  const [isVideoChatActive, setIsVideoChatActive] = useState(false);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const [isVideoOn, setIsVideoOn] = useState(true);
+  const [isAudioOn, setIsAudioOn] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [avatarState, setAvatarState] = useState({
+    expression: 'neutral',
+    gesture: 'idle',
+    speech: '',
+    mouthShape: 'closed'
+  });
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [currentAnnotationType, setCurrentAnnotationType] = useState<'arrow' | 'circle' | 'text' | 'highlight'>('arrow');
+  const [isAddingAnnotation, setIsAddingAnnotation] = useState(false);
+  
+  // References
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const ocrFileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationFrameRef = useRef<number>();
+  const videoStreamRef = useRef<MediaStream | null>(null);
 
   // 从服务端加载项目数据
   useEffect(() => {
     const loadProject = async () => {
+      console.log('开始加载项目:', projectId);
       if (!projectId) {
+        console.log('项目ID为空');
         setProjectError('无效的项目ID');
         setProjectLoading(false);
         return;
@@ -28,17 +70,26 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
 
       try {
         setProjectLoading(true);
+        console.log('验证项目ID:', projectId);
         
         // 验证项目ID并获取项目数据
         const validation = await projectService.validateProjectId(projectId);
+        console.log('验证结果:', validation);
         
         if (!validation.valid) {
+          console.log('项目验证失败:', validation.error);
           setProjectError(validation.error || '项目验证失败');
           setProjectLoading(false);
           return;
         }
 
+        console.log('项目验证成功:', validation.project);
         setProject(validation.project!);
+        
+        // 初始化messages状态
+        setMessages([
+          { role: 'assistant', text: `您好！我是 ${validation.project!.name} 的 AI 专家。我已经加载了最新的产品说明书和视频教程，请问有什么可以帮您？` }
+        ]);
         
         // 记录用户访问（匿名统计）
         await projectService.logUserAccess(projectId, {
@@ -47,6 +98,7 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
           referrer: document.referrer
         });
         
+        console.log('项目加载完成');
         setProjectLoading(false);
       } catch (error) {
         console.error('Failed to load project:', error);
@@ -57,6 +109,20 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
 
     loadProject();
   }, [projectId]);
+
+  // 初始化AI服务（静默加载商家预配置的API密钥）
+  useEffect(() => {
+    const initializeAIService = () => {
+      // 尝试从localStorage加载商家预配置的API密钥
+      const savedApiKey = localStorage.getItem('zhipuApiKey');
+      if (savedApiKey) {
+        aiService.setZhipuApiKey(savedApiKey);
+      }
+      // 如果没有localStorage中的密钥，aiService会自动使用环境变量中的密钥
+    };
+    
+    initializeAIService();
+  }, []);
 
   // 项目加载中
   if (projectLoading) {
@@ -142,69 +208,6 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
       </div>
     );
   }
-  
-  const [messages, setMessages] = useState<{role: 'user' | 'assistant', text: string, image?: string}[]>([
-    { role: 'assistant', text: `您好！我是 ${project.name} 的 AI 专家。我已经加载了最新的产品说明书和视频教程，请问有什么可以帮您？` }
-  ]);
-  const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [activeVideo, setActiveVideo] = useState<string | null>(null);
-  const [streamingMessage, setStreamingMessage] = useState<string | null>(null);
-  const [streamingId, setStreamingId] = useState<number | null>(null);
-  
-  // 初始化AI服务（静默加载商家预配置的API密钥）
-  useEffect(() => {
-    const initializeAIService = () => {
-      // 尝试从localStorage加载商家预配置的API密钥
-      const savedApiKey = localStorage.getItem('zhipuApiKey');
-      if (savedApiKey) {
-        aiService.setZhipuApiKey(savedApiKey);
-      }
-      // 如果没有localStorage中的密钥，aiService会自动使用环境变量中的密钥
-    };
-    
-    initializeAIService();
-  }, []);
-  const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  
-  // OCR 状态
-  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
-  const [ocrResult, setOcrResult] = useState<string>('');
-  const [ocrImage, setOcrImage] = useState<string | null>(null);
-  const [ocrMessage, setOcrMessage] = useState({ type: 'info' as 'info' | 'success' | 'error', text: '' });
-  const ocrFileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Video chat state
-  const [isVideoChatActive, setIsVideoChatActive] = useState(false);
-  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
-  const [isVideoOn, setIsVideoOn] = useState(true);
-  const [isAudioOn, setIsAudioOn] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('disconnected');
-  
-  // Virtual human state
-  const [avatarState, setAvatarState] = useState({
-    expression: 'neutral',
-    gesture: 'idle',
-    speech: '',
-    mouthShape: 'closed'
-  });
-  
-  // Annotation state
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [currentAnnotationType, setCurrentAnnotationType] = useState<'arrow' | 'circle' | 'text' | 'highlight'>('arrow');
-  const [isAddingAnnotation, setIsAddingAnnotation] = useState(false);
-  
-  // References
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number>();
-  const videoStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -216,7 +219,8 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
     };
   }, []);
 
-  if (!project) return <div className="p-10 text-center text-white bg-slate-900 h-screen flex items-center justify-center">Invalid Project</div>;
+  // 项目验证已经在前面的逻辑中处理，移除重复的检查
+  // 确保project存在后再渲染后续内容
 
   // Video chat functions
   const toggleVideoChat = async () => {

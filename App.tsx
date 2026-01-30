@@ -32,6 +32,7 @@ import VideoChat from './components/VideoChat';
 import Settings from './components/Settings';
 import KnowledgeBase from './components/KnowledgeBase';
 import SmartSearch from './components/SmartSearch';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // 公共欢迎页面组件 - 用户访问根路径时显示
 const PublicWelcomePage: React.FC = () => {
@@ -209,13 +210,40 @@ const App: React.FC = () => {
     }
   };
 
+  const toggleProjectStatus = async (id: string) => {
+    const project = projects.find(p => p.id === id);
+    if (project) {
+      const updatedProject = {
+        ...project,
+        status: project.status === ProjectStatus.ACTIVE ? ProjectStatus.DRAFT : ProjectStatus.ACTIVE,
+        updatedAt: new Date().toISOString()
+      };
+      await updateProject(updatedProject);
+    }
+  };
+
+  const deleteProject = async (id: string) => {
+    const success = await projectService.deleteProject(id);
+    if (success) {
+      setProjects(projects.filter(p => p.id !== id));
+    }
+  };
+
   return (
     <Router>
       <div className="flex min-h-screen">
         <Routes>
           {/* 用户端路由（扫码进入） - 绝对安全隔离 */}
-          <Route path="/view/:id" element={<UserPreview projects={projects} />} />
-          <Route path="/video/:id" element={<VideoChat />} />
+          <Route path="/view/:id" element={
+            <ErrorBoundary>
+              <UserPreview projects={projects} />
+            </ErrorBoundary>
+          } />
+          <Route path="/video/:id" element={
+            <ErrorBoundary>
+              <VideoChat />
+            </ErrorBoundary>
+          } />
           
           {/* 商家后台路由 - 需要明确路径访问 */}
           <Route path="/merchant" element={<Navigate to="/merchant/dashboard" replace />} />
@@ -252,7 +280,7 @@ const App: React.FC = () => {
                 <main className="p-12 pb-24">
                   <Routes>
                     <Route path="/dashboard" element={<Dashboard projects={projects} />} />
-                    <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} />} />
+                    <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} onToggleStatus={toggleProjectStatus} onDelete={deleteProject} />} />
                     <Route path="/projects/:id" element={<ProjectDetail projects={projects} onUpdate={updateProject} />} />
                     <Route path="/analytics" element={<Analytics />} />
                     <Route path="/settings" element={<Settings />} />
@@ -298,7 +326,7 @@ const App: React.FC = () => {
                 <main className="p-12 pb-24">
                   <Routes>
                     <Route path="/" element={<Dashboard projects={projects} />} />
-                    <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} />} />
+                    <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} onToggleStatus={toggleProjectStatus} onDelete={deleteProject} />} />
                     <Route path="/projects/:id" element={<ProjectDetail projects={projects} onUpdate={updateProject} />} />
                     <Route path="/analytics" element={<Analytics />} />
                     <Route path="/settings" element={<Settings />} />
