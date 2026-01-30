@@ -16,54 +16,54 @@ const UserPreview: React.FC<{ projects: ProductProject[] }> = ({ projects }) => 
   // 处理项目不存在的情况
   if (!project) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0f1218] to-[#1a1d29] flex flex-col items-center justify-center p-6">
-        <div className="glass-card max-w-md w-full p-12 rounded-[3rem] border border-slate-700">
-          <div className="text-center mb-10">
-            <div className="w-20 h-20 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mx-auto mb-8">
+      <div className="min-h-screen bg-gradient-to-br from-[#1a103d] to-[#2d1b69] flex flex-col items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-[3rem] border-2 border-amber-500/30 p-8 shadow-2xl">
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-purple-500/20 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertCircle size={40} />
             </div>
-            <h1 className="text-2xl font-black text-white mb-4">服务暂时不可用</h1>
-            <p className="text-slate-400">找不到对应的项目信息，请检查二维码是否正确，或联系我们的人工客服获取帮助。</p>
+            <h1 className="text-2xl font-black text-purple-800 mb-4">服务暂时不可用</h1>
+            <p className="text-slate-600 text-center">找不到对应的项目信息，请检查二维码是否正确，或联系我们的人工客服获取帮助。</p>
           </div>
           
-          <div className="space-y-6 mb-10">
-            <h2 className="text-lg font-black text-white mb-4">联系我们</h2>
+          <div className="space-y-4 mb-8">
+            <h2 className="text-lg font-black text-purple-800 mb-4">联系我们</h2>
             
-            <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-              <div className="w-10 h-10 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center">
+            <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+              <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
               </div>
-              <div>
-                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">客服电话</p>
-                <p className="text-white font-bold">400-123-4567</p>
+              <div className="flex-1">
+                <p className="text-xs font-black text-purple-600 uppercase tracking-widest">客服电话</p>
+                <p className="text-purple-900 font-bold">400-123-4567</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-              <div className="w-10 h-10 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center">
+            <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+              <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
               </div>
-              <div>
-                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">官方网站</p>
-                <p className="text-white font-bold">www.aivirtualservice.com</p>
+              <div className="flex-1">
+                <p className="text-xs font-black text-purple-600 uppercase tracking-widest">官方网站</p>
+                <p className="text-purple-900 font-bold">www.aivirtualservice.com</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-              <div className="w-10 h-10 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center">
+            <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+              <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
               </div>
-              <div>
-                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">微信公众号</p>
-                <p className="text-white font-bold">AI虚拟客服助手</p>
+              <div className="flex-1">
+                <p className="text-xs font-black text-purple-600 uppercase tracking-widest">微信公众号</p>
+                <p className="text-purple-900 font-bold">AI虚拟客服助手</p>
               </div>
             </div>
           </div>
           
-          <div className="border-t border-slate-700 pt-6">
-            <h3 className="text-sm font-black text-white mb-3">公司信息</h3>
-            <p className="text-slate-400 text-sm mb-2">公司名称：智能科技有限公司</p>
-            <p className="text-slate-400 text-sm">地址：北京市海淀区科技园区88号智能大厦15层</p>
+          <div className="border-t border-purple-200 pt-6">
+            <h3 className="text-sm font-black text-purple-800 mb-3">公司信息</h3>
+            <p className="text-slate-600 text-sm mb-2">公司名称：智能科技有限公司</p>
+            <p className="text-slate-600 text-sm">地址：北京市海淀区科技园区88号智能大厦15层</p>
           </div>
         </div>
       </div>
