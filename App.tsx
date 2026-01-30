@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Link, useNavigate, useParams, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
@@ -22,6 +22,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { ProductProject, ProjectStatus, ProjectConfig, AIProvider } from './types';
+import { projectService } from './services/projectService';
 import Dashboard from './components/Dashboard';
 import ProjectList from './components/ProjectList';
 import ProjectDetail from './components/ProjectDetail';
@@ -31,6 +32,67 @@ import VideoChat from './components/VideoChat';
 import Settings from './components/Settings';
 import KnowledgeBase from './components/KnowledgeBase';
 import SmartSearch from './components/SmartSearch';
+
+// 公共欢迎页面组件 - 用户访问根路径时显示
+const PublicWelcomePage: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#1a103d] to-[#2d1b69] flex flex-col items-center justify-center p-6">
+      <div className="max-w-2xl w-full bg-white rounded-[3rem] border-2 border-violet-500/30 p-12 shadow-2xl text-center">
+        <div className="w-24 h-24 bg-violet-500/20 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-8">
+          <MessageSquare size={48} />
+        </div>
+        
+        <h1 className="text-4xl font-black text-violet-800 mb-6">AI虚拟客服</h1>
+        <p className="text-xl text-slate-600 mb-8">中恒创世科技智能产品服务平台</p>
+        
+        <div className="bg-violet-50 border border-violet-200 rounded-2xl p-8 mb-8">
+          <h2 className="text-2xl font-bold text-violet-800 mb-4">🤖 如何使用</h2>
+          <div className="text-left space-y-4 text-slate-700">
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 bg-violet-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">1</div>
+              <div>
+                <p className="font-bold">购买中恒创世产品</p>
+                <p className="text-sm text-slate-600">在产品包装上找到专属二维码</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 bg-violet-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">2</div>
+              <div>
+                <p className="font-bold">扫描二维码</p>
+                <p className="text-sm text-slate-600">使用手机扫码软件或浏览器扫描</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 bg-violet-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">3</div>
+              <div>
+                <p className="font-bold">开始智能对话</p>
+                <p className="text-sm text-slate-600">获得专业的安装指导和技术支持</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-slate-800">联系我们</h3>
+          
+          <div className="flex items-center justify-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="w-10 h-10 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-black text-violet-600 uppercase tracking-widest">中恒创世技术支持</p>
+              <p className="text-violet-900 font-bold">400-888-6666</p>
+            </div>
+          </div>
+          
+          <p className="text-sm text-slate-500 mt-8">
+            © 2024 中恒创世科技有限公司 版权所有
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Sidebar = ({ projects }: { projects: ProductProject[] }) => {
   return (
@@ -90,115 +152,27 @@ const SidebarLink = ({ to, icon, labelEn, labelZh }: { to: string, icon: React.R
 );
 
 const App: React.FC = () => {
-  // 静态默认项目数据，确保部署后用户扫码能找到项目
-  const defaultProjects: ProductProject[] = [
-    {
-      id: 'p1',
-      name: '测试项目',
-      description: '用于测试扫码功能的项目。',
-      status: ProjectStatus.ACTIVE,
-      config: {
-        provider: AIProvider.ZHIPU,
-        voiceName: 'tongtong',
-        visionEnabled: true,
-        visionPrompt: 'Check if all cables are plugged in and the LED is glowing green.',
-        systemInstruction: 'You are a helpful product assistant.',
-        videoGuides: [],
-        multimodalEnabled: true,
-        videoChatEnabled: true,
-        videoChatPrompt: 'Analyze the user\'s video and provide technical support based on the product knowledge base.',
-        avatarEnabled: true,
-        annotationEnabled: true
-      },
-      knowledgeBase: [
-        { id: 'k1', title: '使用说明', type: 'text' as any, content: '这是一个测试项目，用于验证扫码功能是否正常工作。', createdAt: new Date().toISOString() },
-        { id: 'k2', title: '测试内容', type: 'text' as any, content: '扫码成功！您可以开始使用AI虚拟客服功能了。', createdAt: new Date().toISOString() }
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'proj_1',
-      name: 'SmartHome Pro Hub',
-      description: 'Next-gen automation controller for modern homes. 下一代智能家居控制器。',
-      status: ProjectStatus.ACTIVE,
-      config: {
-        provider: AIProvider.ZHIPU,
-        voiceName: 'tongtong',
-        visionEnabled: true,
-        visionPrompt: 'Check if all cables are plugged in and the LED is glowing green.',
-        systemInstruction: 'You are a technical support expert for SmartHome Pro products.',
-        videoGuides: [],
-        multimodalEnabled: true,
-        videoChatEnabled: true,
-        videoChatPrompt: 'Analyze the user\'s video and provide technical support based on the product knowledge base.',
-        avatarEnabled: true,
-        annotationEnabled: true
-      },
-      knowledgeBase: [
-        { id: 'k1', title: 'Initial Setup', type: 'text' as any, content: 'Plug in the device and wait 60 seconds.', createdAt: new Date().toISOString() },
-        { id: 'k2', title: 'Connection Guide', type: 'text' as any, content: '1. Download the SmartHome app\n2. Create an account\n3. Follow the in-app setup instructions', createdAt: new Date().toISOString() },
-        { id: 'k3', title: 'Troubleshooting', type: 'text' as any, content: 'If the device is not responding, try resetting it by pressing and holding the reset button for 10 seconds.', createdAt: new Date().toISOString() }
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'proj_2',
-      name: 'SmartThermostat',
-      description: 'Intelligent temperature control system. 智能温度控制系统。',
-      status: ProjectStatus.ACTIVE,
-      config: {
-        provider: AIProvider.ZHIPU,
-        voiceName: 'tongtong',
-        visionEnabled: false,
-        visionPrompt: '',
-        systemInstruction: 'You are a helpful assistant for SmartThermostat users.',
-        videoGuides: [],
-        multimodalEnabled: true,
-        videoChatEnabled: true,
-        videoChatPrompt: 'Analyze the user\'s video and provide technical support based on the product knowledge base.',
-        avatarEnabled: true,
-        annotationEnabled: true
-      },
-      knowledgeBase: [
-        { id: 'k1', title: 'Installation', type: 'text' as any, content: 'Mount the thermostat on the wall and connect the wires according to the diagram.', createdAt: new Date().toISOString() },
-        { id: 'k2', title: 'Usage Tips', type: 'text' as any, content: 'Set different temperatures for day and night to save energy.', createdAt: new Date().toISOString() }
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ];
+  const [projects, setProjects] = useState<ProductProject[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
 
-  const [projects, setProjects] = useState<ProductProject[]>(() => {
-    const saved = localStorage.getItem('smartguide_projects');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const processedProjects = parsed.map((p: any) => ({
-        ...p,
-        config: {
-          provider: AIProvider.ZHIPU,
-          videoGuides: [],
-          ...p.config
-        },
-        knowledgeBase: p.knowledgeBase || []
-      }));
-      
-      // 确保至少包含默认项目
-      const hasDefaultProjects = processedProjects.some(p => p.id === 'proj_1' || p.id === 'proj_2');
-      if (!hasDefaultProjects) {
-        return [...processedProjects, ...defaultProjects];
-      }
-      return processedProjects;
-    }
-    return defaultProjects;
-  });
-
+  // 从项目服务加载所有项目（商家后台使用）
   useEffect(() => {
-    localStorage.setItem('smartguide_projects', JSON.stringify(projects));
-  }, [projects]);
+    const loadProjects = async () => {
+      try {
+        setProjectsLoading(true);
+        const allProjects = await projectService.getAllProjects();
+        setProjects(allProjects);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
 
-  const addProject = (name: string, description: string) => {
+    loadProjects();
+  }, []);
+
+  const addProject = async (name: string, description: string) => {
     const newProject: ProductProject = {
       id: `proj_${Date.now()}`,
       name,
@@ -207,13 +181,13 @@ const App: React.FC = () => {
       config: {
         provider: AIProvider.ZHIPU,
         voiceName: 'tongtong',
-        visionEnabled: false,
-        visionPrompt: 'Please verify if the installation matches the manual.',
-        systemInstruction: 'You are a helpful product assistant.',
+        visionEnabled: true,
+        visionPrompt: '请分析安装照片，检查产品安装是否正确，并提供专业的安装指导建议。',
+        systemInstruction: '您是中恒创世科技的专业产品技术支持专家。请基于产品知识库提供准确的技术支持和安装指导。',
         videoGuides: [],
         multimodalEnabled: true,
         videoChatEnabled: true,
-        videoChatPrompt: 'Analyze the user\'s video and provide technical support based on the product knowledge base.',
+        videoChatPrompt: '您是中恒创世科技的专业技术支持专家。请仔细分析用户提供的视频内容，识别产品使用或安装过程中的具体问题，并基于产品知识库提供准确的解决方案。\n\n分析重点：\n1. 产品型号识别与规格确认\n2. 安装步骤的正确性检查\n3. 连接线路与接口状态\n4. 设备指示灯与显示状态\n5. 操作流程的规范性\n6. 潜在安全隐患识别\n\n回复要求：\n- 使用专业但易懂的语言\n- 提供具体的操作步骤\n- 标注重要的安全注意事项\n- 如需更换配件，请说明具体型号\n- 优先引用官方知识库内容\n- 必要时建议联系中恒创世技术支持热线',
         avatarEnabled: true,
         annotationEnabled: true
       },
@@ -221,22 +195,30 @@ const App: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    setProjects([...projects, newProject]);
+    
+    const success = await projectService.createProject(newProject);
+    if (success) {
+      setProjects([...projects, newProject]);
+    }
   };
 
-  const updateProject = (updated: ProductProject) => {
-    setProjects(projects.map(p => p.id === updated.id ? updated : p));
+  const updateProject = async (updated: ProductProject) => {
+    const success = await projectService.updateProject(updated);
+    if (success) {
+      setProjects(projects.map(p => p.id === updated.id ? updated : p));
+    }
   };
 
   return (
     <Router>
       <div className="flex min-h-screen">
         <Routes>
-          {/* 用户端路由（扫码进入） */}
-          <Route path="/view/:projectId" element={<UserPreview projects={projects} />} />
-          <Route path="/video/:projectId" element={<VideoChat projects={projects} />} />
+          {/* 用户端路由（扫码进入） - 绝对安全隔离 */}
+          <Route path="/view/:projectId" element={<UserPreview />} />
+          <Route path="/video/:projectId" element={<VideoChat />} />
           
-          {/* 商家后台路由 */}
+          {/* 商家后台路由 - 需要明确路径访问 */}
+          <Route path="/merchant" element={<Navigate to="/merchant/dashboard" replace />} />
           <Route path="/merchant/*" element={
             <>
               <Sidebar projects={projects} />
@@ -269,12 +251,11 @@ const App: React.FC = () => {
 
                 <main className="p-12 pb-24">
                   <Routes>
-                    <Route path="/" element={<Dashboard projects={projects} />} />
+                    <Route path="/dashboard" element={<Dashboard projects={projects} />} />
                     <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} />} />
                     <Route path="/projects/:id" element={<ProjectDetail projects={projects} onUpdate={updateProject} />} />
                     <Route path="/analytics" element={<Analytics />} />
                     <Route path="/settings" element={<Settings />} />
-                    {/* 商家后台专有功能 */}
                     <Route path="/knowledge" element={<KnowledgeBase />} />
                     <Route path="/search" element={<SmartSearch />} />
                   </Routes>
@@ -283,52 +264,8 @@ const App: React.FC = () => {
             </>
           } />
           
-          {/* 默认重定向到商家后台 */}
-          <Route path="*" element={
-            <>
-              <Sidebar projects={projects} />
-              <div className="flex-1 flex flex-col min-w-0">
-                <header className="h-24 border-b border-slate-200 bg-white/80 flex items-center justify-between px-12 sticky top-0 z-10 backdrop-blur-2xl">
-                  <div className="flex items-center gap-4 bg-slate-100 border border-slate-200 px-6 py-3 rounded-2xl w-[450px] shadow-inner focus-within:border-amber-500/50 transition-all">
-                    <Search size={18} className="text-slate-500" />
-                    <input 
-                      type="text" 
-                      placeholder="搜索资产或向导 Search guide assets..." 
-                      className="bg-transparent border-none outline-none text-sm w-full text-slate-700 placeholder-slate-500 font-medium"
-                    />
-                  </div>
-                  <div className="flex items-center gap-10">
-                    <button className="text-slate-500 hover:text-amber-500 transition-all relative">
-                      <Bell size={24} />
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full border-4 border-white shadow-lg"></span>
-                    </button>
-                    <div className="flex items-center gap-5 pl-10 border-l border-slate-200">
-                      <div className="text-right">
-                        <p className="text-sm font-black text-slate-700 leading-none uppercase tracking-wide">Alex Merchant</p>
-                        <p className="text-[10px] text-amber-500 uppercase font-black mt-2 tracking-[0.2em] opacity-80">PRO Admin</p>
-                      </div>
-                      <div className="w-12 h-12 rounded-2xl purple-gradient-btn gold-border-glow flex items-center justify-center text-white shadow-2xl">
-                        <User size={24} />
-                      </div>
-                    </div>
-                  </div>
-                </header>
-
-                <main className="p-12 pb-24">
-                  <Routes>
-                    <Route path="/" element={<Dashboard projects={projects} />} />
-                    <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} />} />
-                    <Route path="/projects/:id" element={<ProjectDetail projects={projects} onUpdate={updateProject} />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/settings" element={<Settings />} />
-                    {/* 商家后台专有功能 */}
-                    <Route path="/knowledge" element={<KnowledgeBase />} />
-                    <Route path="/search" element={<SmartSearch />} />
-                  </Routes>
-                </main>
-              </div>
-            </>
-          } />
+          {/* 默认路由 - 显示用户友好的欢迎页面，绝不跳转到商家后台 */}
+          <Route path="*" element={<PublicWelcomePage />} />
         </Routes>
       </div>
     </Router>

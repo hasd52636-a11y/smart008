@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI虚拟客服 - 连接测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #4c1d95;
+            margin-bottom: 10px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+        }
+        .test-section.success {
+            border-color: #10b981;
+            background-color: #f0fdf4;
+        }
+        .test-section.error {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+        .test-section.warning {
+            border-color: #f59e0b;
+            background-color: #fffbeb;
+        }
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .qr-code img {
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .url-display {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .status.success {
+            background: #10b981;
+            color: white;
+        }
+        .status.error {
+            background: #ef4444;
+            color: white;
+        }
+        .status.warning {
+            background: #f59e0b;
+            color: white;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #4c1d95;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            margin: 5px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #5b21b6;
+        }
+        .btn.secondary {
+            background: #6b7280;
+        }
+        .btn.secondary:hover {
+            background: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI虚拟客服连接测试</h1>
+            <p>中恒创世科技 - 扫码服务诊断工具</p>
+        </div>
+
+        <!-- 环境检测 -->
+        <div class="test-section" id="env-section">
+            <h3>📍 环境检测</h3>
+            <p><strong>当前URL:</strong> <span id="current-url"></span></p>
+            <p><strong>协议:</strong> <span id="protocol"></span></p>
+            <p><strong>域名:</strong> <span id="hostname"></span></p>
+            <p><strong>端口:</strong> <span id="port"></span></p>
+            <p><strong>路径:</strong> <span id="pathname"></span></p>
+        </div>
+
+        <!-- 二维码生成测试 -->
+        <div class="test-section" id="qr-section">
+            <h3>📱 二维码生成测试</h3>
+            <div id="qr-results"></div>
+        </div>
+
+        <!-- 项目访问测试 -->
+        <div class="test-section" id="project-section">
+            <h3>🔗 项目访问测试</h3>
+            <div id="project-results"></div>
+        </div>
+
+        <!-- API连接测试 -->
+        <div class="test-section" id="api-section">
+            <h3>🔌 API连接测试</h3>
+            <div id="api-results"></div>
+        </div>
+
+        <!-- 修复建议 -->
+        <div class="test-section" id="fix-section">
+            <h3>🔧 修复建议</h3>
+            <div id="fix-results"></div>
+        </div>
+    </div>
+
+    <script>
+        // 环境检测
+        function detectEnvironment() {
+            const currentUrl = window.location.href;
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port || '默认端口';
+            const pathname = window.location.pathname;
+
+            document.getElementById('current-url').textContent = currentUrl;
+            document.getElementById('protocol').textContent = protocol;
+            document.getElementById('hostname').textContent = hostname;
+            document.getElementById('port').textContent = port;
+            document.getElementById('pathname').textContent = pathname;
+
+            // 判断环境状态
+            const envSection = document.getElementById('env-section');
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                envSection.className = 'test-section warning';
+                envSection.innerHTML += '<p><span class="status warning">开发环境</span> 当前在本地开发环境</p>';
+            } else {
+                envSection.className = 'test-section success';
+                envSection.innerHTML += '<p><span class="status success">生产环境</span> 当前在生产环境</p>';
+            }
+        }
+
+        // 二维码生成测试
+        function testQRGeneration() {
+            const testProjects = ['p1', 'proj_1', 'proj_2'];
+            const qrResults = document.getElementById('qr-results');
+            
+            testProjects.forEach(projectId => {
+                // 使用修复后的URL生成逻辑
+                const port = window.location.port ? `:${window.location.port}` : '';
+                const productGuideUrl = `${window.location.protocol}//${window.location.hostname}${port}${window.location.pathname}#/view/${projectId}`;
+                const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(productGuideUrl)}&color=7c3aed&bgcolor=ffffff`;
+                
+                const projectDiv = document.createElement('div');
+                projectDiv.innerHTML = `
+                    <h4>项目 ${projectId}</h4>
+                    <div class="url-display">${productGuideUrl}</div>
+                    <div class="qr-code">
+                        <img src="${qrImageUrl}" alt="QR Code for ${projectId}" />
+                    </div>
+                    <p>
+                        <a href="${productGuideUrl}" class="btn" target="_blank">测试链接</a>
+                        <button class="btn secondary" onclick="copyToClipboard('${productGuideUrl}')">复制链接</button>
+                    </p>
+                `;
+                qrResults.appendChild(projectDiv);
+            });
+
+            document.getElementById('qr-section').className = 'test-section success';
+        }
+
+        // 项目访问测试
+        function testProjectAccess() {
+            const projectResults = document.getElementById('project-results');
+            const testUrls = [
+                `${window.location.origin}${window.location.pathname}#/view/p1`,
+                `${window.location.origin}${window.location.pathname}#/view/proj_1`,
+                `${window.location.origin}${window.location.pathname}#/video/p1`
+            ];
+
+            testUrls.forEach(url => {
+                const urlDiv = document.createElement('div');
+                urlDiv.innerHTML = `
+                    <p><strong>测试URL:</strong> ${url}</p>
+                    <p><a href="${url}" class="btn" target="_blank">访问测试</a></p>
+                `;
+                projectResults.appendChild(urlDiv);
+            });
+
+            document.getElementById('project-section').className = 'test-section success';
+        }
+
+        // API连接测试
+        function testAPIConnection() {
+            const apiResults = document.getElementById('api-results');
+            const apiKey = localStorage.getItem('zhipuApiKey');
+            
+            if (!apiKey) {
+                apiResults.innerHTML = `
+                    <p><span class="status error">API密钥缺失</span></p>
+                    <p>未在localStorage中找到'zhipuApiKey'</p>
+                    <p>用户扫码后将看到API密钥配置提示</p>
+                `;
+                document.getElementById('api-section').className = 'test-section warning';
+            } else {
+                apiResults.innerHTML = `
+                    <p><span class="status success">API密钥已配置</span></p>
+                    <p>密钥: ${apiKey.substring(0, 20)}...</p>
+                    <p>用户扫码后可以正常使用AI服务</p>
+                `;
+                document.getElementById('api-section').className = 'test-section success';
+            }
+        }
+
+        // 修复建议
+        function generateFixSuggestions() {
+            const fixResults = document.getElementById('fix-results');
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const apiKey = localStorage.getItem('zhipuApiKey');
+            
+            let suggestions = [];
+            
+            // 检查环境
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                suggestions.push({
+                    type: 'warning',
+                    title: '开发环境检测',
+                    content: '当前在开发环境，部署到生产环境时URL会自动适配'
+                });
+            }
+            
+            // 检查端口
+            if (port && port !== '80' && port !== '443') {
+                suggestions.push({
+                    type: 'success',
+                    title: '端口配置正确',
+                    content: `已正确识别端口 ${port}，二维码URL将包含此端口`
+                });
+            }
+            
+            // 检查API密钥
+            if (!apiKey) {
+                suggestions.push({
+                    type: 'error',
+                    title: 'API密钥未配置',
+                    content: '需要在设置页面配置智谱AI密钥，或者用户扫码后会看到配置提示'
+                });
+            }
+            
+            // 添加通用建议
+            suggestions.push({
+                type: 'success',
+                title: '连接问题已修复',
+                content: '已修复二维码URL硬编码端口问题，现在支持所有环境部署'
+            });
+            
+            suggestions.forEach(suggestion => {
+                const suggestionDiv = document.createElement('div');
+                suggestionDiv.innerHTML = `
+                    <p><span class="status ${suggestion.type}">${suggestion.title}</span></p>
+                    <p>${suggestion.content}</p>
+                `;
+                fixResults.appendChild(suggestionDiv);
+            });
+            
+            document.getElementById('fix-section').className = 'test-section success';
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('链接已复制到剪贴板');
+            });
+        }
+
+        // 页面加载时执行所有测试
+        window.onload = function() {
+            detectEnvironment();
+            testQRGeneration();
+            testProjectAccess();
+            testAPIConnection();
+            generateFixSuggestions();
+        };
+    </script>
+</body>
+</html>

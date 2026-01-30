@@ -30,9 +30,13 @@
         <h3>🔊 语音合成测试</h3>
         <textarea id="ttsInput" placeholder="输入要合成的文字...">您好，这是智谱AI语音合成功能测试</textarea>
         <select id="voiceSelect">
-            <option value="tongtong">通通(女声)</option>
-            <option value="zhangsan">张三(男声)</option>
-            <option value="lisi">李四(男声)</option>
+            <option value="tongtong">彤彤(女声) - 默认</option>
+            <option value="chuichui">锤锤(男声)</option>
+            <option value="xiaochen">小陈(女声)</option>
+            <option value="jam">动物圈JAM - 特色音色</option>
+            <option value="kazi">动物圈卡兹 - 特色音色</option>
+            <option value="douji">动物圈豆几 - 特色音色</option>
+            <option value="luodo">动物圈洛多 - 特色音色</option>
         </select>
         <button onclick="testTTS()">生成语音</button>
         <button onclick="playAudio()" id="playBtn" disabled>播放音频</button>

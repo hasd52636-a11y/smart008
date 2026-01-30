@@ -224,5 +224,39 @@ async function runAllTests() {
   }
 }
 
-// 执行测试
-runAllTests().catch(console.error);
+// 测试智谱TTS支持的音色
+async function testTTSVoices() {
+  console.log('🔊 测试智谱TTS支持的音色...');
+  
+  const voices = ['tongtong', 'chuichui', 'xiaochen', 'jam', 'kazi', 'douji', 'luodo'];
+  
+  for (const voice of voices) {
+    try {
+      const response = await fetch(`${BASE_URL}/audio/speech`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'glm-tts',
+          input: '测试音色',
+          voice: voice,
+          response_format: 'wav'
+        })
+      });
+      
+      if (response.ok) {
+        console.log(`✅ 音色 "${voice}" 支持`);
+      } else {
+        const error = await response.json();
+        console.log(`❌ 音色 "${voice}" 不支持:`, error.error?.message || 'Unknown error');
+      }
+    } catch (error) {
+      console.log(`❌ 音色 "${voice}" 测试失败:`, error.message);
+    }
+  }
+}
+
+// 运行音色测试
+testTTSVoices().catch(console.error);

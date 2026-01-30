@@ -70,9 +70,26 @@ export class AIService {
     this.zhipuApiKey = key;
   }
 
-  // 获取智谱API密钥（优先使用用户设置的密钥，其次使用环境变量）
+  // 获取智谱API密钥（优先使用环境变量，其次使用用户设置的密钥）
   private getZhipuApiKey(): string {
-    return this.zhipuApiKey || process.env.ZHIPU_API_KEY || process.env.API_KEY || '';
+    // 优先使用环境变量（商家预配置）
+    const envKey = process.env.ZHIPU_API_KEY || process.env.API_KEY;
+    if (envKey) {
+      return envKey;
+    }
+    
+    // 其次使用localStorage中的密钥（商家后台设置）
+    if (this.zhipuApiKey) {
+      return this.zhipuApiKey;
+    }
+    
+    // 最后尝试从localStorage读取
+    const localKey = typeof window !== 'undefined' ? localStorage.getItem('zhipuApiKey') : null;
+    if (localKey) {
+      return localKey;
+    }
+    
+    return '';
   }
 
   private async zhipuFetch(endpoint: string, body: any, isBinary: boolean = false) {
@@ -411,19 +428,47 @@ export class AIService {
   async generateSpeech(text: string, voiceName: string, provider: AIProvider): Promise<string | undefined> {
     // 仅使用智谱AI实现
     try {
-      const buffer = await this.zhipuFetch('/audio/speech', {
+      console.log(`[TTS] 开始生成语音 - 语音: ${voiceName}, 文本: "${text}"`);
+      
+      const requestBody = {
         model: 'glm-tts',
         input: text,
         voice: voiceName || 'tongtong',
         response_format: 'wav'
-      }, true);
+      };
+      
+      console.log('[TTS] 请求参数:', requestBody);
+      
+      const buffer = await this.zhipuFetch('/audio/speech', requestBody, true);
+      
+      if (!buffer || buffer.byteLength === 0) {
+        throw new Error('返回的音频数据为空');
+      }
+      
+      console.log(`[TTS] 成功生成语音，大小: ${buffer.byteLength} 字节`);
       
       const uint8 = new Uint8Array(buffer as ArrayBuffer);
       let binary = '';
       for (let i = 0; i < uint8.byteLength; i++) binary += String.fromCharCode(uint8[i]);
       return window.btoa(binary);
     } catch (e) {
-      console.error("Zhipu TTS Failed", e);
+      console.error(`[TTS] 语音生成失败 - 语音: ${voiceName}`, e);
+      
+      // 提供更详细的错误信息
+      if (e instanceof Error) {
+        if (e.message.includes('401')) {
+          console.error('[TTS] 认证失败，请检查API密钥是否正确');
+        } else if (e.message.includes('403')) {
+          console.error(`[TTS] 权限不足，可能没有语音 "${voiceName}" 的使用权限`);
+        } else if (e.message.includes('404')) {
+          console.error(`[TTS] 语音 "${voiceName}" 不存在或不可用`);
+        } else if (e.message.includes('429')) {
+          console.error('[TTS] 请求过于频繁，请稍后重试');
+        } else {
+          console.error(`[TTS] 未知错误: ${e.message}`);
+        }
+      }
+      
       return undefined;
     }
   }

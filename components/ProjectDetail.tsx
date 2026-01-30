@@ -6,7 +6,7 @@ import {
   ArrowLeft, Save, Trash2, Plus, FileText, Mic, QrCode, Settings,
   ShieldCheck, Video, Globe, Sparkles, Play, Info, Download, 
   ExternalLink, Copy, Upload, FileUp, X, CheckCircle, Volume2,
-  Send
+  Send, Camera
 } from 'lucide-react';
 import { aiService } from '../services/aiService';
 
@@ -38,6 +38,12 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
   const handleSave = () => {
     onUpdate(localProject);
     alert('配置已同步 Configuration Synced!');
+  };
+
+  // 自动保存配置的函数
+  const autoSave = (updatedProject: ProductProject) => {
+    setLocalProject(updatedProject);
+    onUpdate(updatedProject);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,7 +95,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
     reader.readAsDataURL(file);
   };
 
-  const productGuideUrl = `${window.location.protocol}//${window.location.hostname}:3000/#/view/${id}`;
+  // 动态获取当前域名和端口，适配所有环境
+  const port = window.location.port ? `:${window.location.port}` : '';
+  const productGuideUrl = `${window.location.protocol}//${window.location.hostname}${port}${window.location.pathname}#/view/${id}`;
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(productGuideUrl)}&color=7c3aed&bgcolor=ffffff`;
 
   return (
@@ -107,7 +115,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
           </div>
         </div>
         <button onClick={handleSave} className="purple-gradient-btn text-white px-8 py-3.5 rounded-2xl font-black text-sm flex items-center gap-3">
-          <Save size={20} /> Sync 同步更改
+          <Save size={20} /> 手动同步 Manual Sync
         </button>
       </div>
 
@@ -200,6 +208,75 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                   <input type="file" ref={videoInputRef} onChange={handleManualVideoUpload} accept="video/*" className="hidden" />
                 </div>
 
+                <div className={`glass-card p-8 rounded-[3rem] border ${localProject.config.visionEnabled ? 'border-slate-200' : 'border-slate-300 opacity-70'} flex flex-col justify-between group`}>
+                  <div>
+                    <Camera className={`${localProject.config.visionEnabled ? 'text-blue-500' : 'text-slate-400'} mb-6`} size={32} />
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xl font-bold text-slate-800">图片分析 AI</h4>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer" 
+                          checked={localProject.config.visionEnabled}
+                          onChange={(e) => {
+                            const updatedProject = {
+                              ...localProject,
+                              config: {
+                                ...localProject.config,
+                                visionEnabled: e.target.checked
+                              }
+                            };
+                            autoSave(updatedProject);
+                          }}
+                        />
+                        <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
+                      </label>
+                    </div>
+                    <p className="text-sm text-slate-600 mt-2">智能分析用户上传的图片，识别安装问题并提供解决方案。</p>
+                    {!localProject.config.visionEnabled && (
+                      <p className="text-sm text-amber-500 mt-2 font-medium">功能已禁用</p>
+                    )}
+                    
+                    {localProject.config.visionEnabled && (
+                      <div className="mt-4">
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">图片分析提示词</label>
+                        <textarea 
+                          value={localProject.config.visionPrompt}
+                          onChange={(e) => {
+                            const updatedProject = {
+                              ...localProject,
+                              config: {
+                                ...localProject.config,
+                                visionPrompt: e.target.value
+                              }
+                            };
+                            setLocalProject(updatedProject);
+                          }}
+                          onBlur={() => {
+                            // 失去焦点时自动保存
+                            onUpdate(localProject);
+                          }}
+                          className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/30 transition-all h-24 resize-none"
+                          placeholder="请分析安装照片，检查产品安装是否正确，并提供专业的安装指导建议。"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <button 
+                    onClick={async () => {
+                      if (!localProject.config.visionEnabled) {
+                        alert('图片分析功能已禁用，请先启用该功能');
+                        return;
+                      }
+                      alert('图片分析功能已启用，用户可以通过扫码后上传图片进行分析。');
+                    }}
+                    disabled={!localProject.config.visionEnabled}
+                    className={`mt-8 py-4 ${localProject.config.visionEnabled ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white' : 'bg-slate-200 text-slate-500 border border-slate-300 cursor-not-allowed'} rounded-2xl font-black text-xs uppercase transition-all`}
+                  >
+                    {localProject.config.visionEnabled ? 'Test Vision' : 'Disabled'}
+                  </button>
+                </div>
+
                 <div className={`glass-card p-8 rounded-[3rem] border ${localProject.config.multimodalEnabled ? 'border-slate-200' : 'border-slate-300 opacity-70'} flex flex-col justify-between group`}>
                   <div>
                     <Video className={`${localProject.config.multimodalEnabled ? 'text-red-500' : 'text-slate-400'} mb-6`} size={32} />
@@ -211,13 +288,14 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                           className="sr-only peer" 
                           checked={localProject.config.multimodalEnabled}
                           onChange={(e) => {
-                            setLocalProject({
+                            const updatedProject = {
                               ...localProject,
                               config: {
                                 ...localProject.config,
                                 multimodalEnabled: e.target.checked
                               }
-                            });
+                            };
+                            autoSave(updatedProject);
                           }}
                         />
                         <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
@@ -274,13 +352,18 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                           className="sr-only peer" 
                           checked={localProject.config.videoChatEnabled}
                           onChange={(e) => {
-                            setLocalProject({
+                            const isEnabled = e.target.checked;
+                            const updatedProject = {
                               ...localProject,
                               config: {
                                 ...localProject.config,
-                                videoChatEnabled: e.target.checked
+                                videoChatEnabled: isEnabled,
+                                // 当主开关开启时，自动启用虚拟人和标注工具
+                                avatarEnabled: isEnabled,
+                                annotationEnabled: isEnabled
                               }
-                            });
+                            };
+                            autoSave(updatedProject);
                           }}
                         />
                         <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-violet-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-500"></div>
@@ -293,65 +376,42 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                         <textarea 
                           value={localProject.config.videoChatPrompt}
                           onChange={(e) => {
-                            setLocalProject({
+                            const updatedProject = {
                               ...localProject,
                               config: {
                                 ...localProject.config,
                                 videoChatPrompt: e.target.value
                               }
-                            });
+                            };
+                            setLocalProject(updatedProject);
+                          }}
+                          onBlur={() => {
+                            // 失去焦点时自动保存
+                            onUpdate(localProject);
                           }}
                           className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/30 transition-all h-32 resize-none"
-                          placeholder="Analyze the user's video and provide technical support based on the product knowledge base."
+                          placeholder="您是中恒创世科技的专业技术支持专家。请仔细分析用户提供的视频内容，识别产品使用或安装过程中的具体问题，并基于产品知识库提供准确的解决方案。"
                         />
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                            启用虚拟人
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                className="sr-only peer" 
-                                checked={localProject.config.avatarEnabled}
-                                onChange={(e) => {
-                                  setLocalProject({
-                                    ...localProject,
-                                    config: {
-                                      ...localProject.config,
-                                      avatarEnabled: e.target.checked
-                                    }
-                                  });
-                                }}
-                              />
-                              <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-violet-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-violet-500"></div>
-                            </label>
-                          </label>
+                      {localProject.config.videoChatEnabled && (
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                          <p className="text-xs text-slate-600 mb-2">
+                            <span className="font-bold">已启用功能：</span>
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-violet-100 text-violet-700">
+                              ✓ 虚拟人形象
+                            </span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-violet-100 text-violet-700">
+                              ✓ 视频标注工具
+                            </span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-violet-100 text-violet-700">
+                              ✓ 实时视频分析
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <label className="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                            启用标注工具
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                className="sr-only peer" 
-                                checked={localProject.config.annotationEnabled}
-                                onChange={(e) => {
-                                  setLocalProject({
-                                    ...localProject,
-                                    config: {
-                                      ...localProject.config,
-                                      annotationEnabled: e.target.checked
-                                    }
-                                  });
-                                }}
-                              />
-                              <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-violet-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-violet-500"></div>
-                            </label>
-                          </label>
-                        </div>
-                      </div>
+                      )}
                     </div>
                     
                     {!localProject.config.videoChatEnabled && (
@@ -439,28 +499,25 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                     <select 
                       value={localProject.config.voiceName}
                       onChange={(e) => {
-                        setLocalProject({
+                        const updatedProject = {
                           ...localProject,
                           config: {
                             ...localProject.config,
                             voiceName: e.target.value
                           }
-                        });
+                        };
+                        autoSave(updatedProject);
                       }}
                       className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/30 transition-all"
                     >
-                      {/* 普通话 */}
-                      <option value="zhangsan">普通话-男声 (zhangsan)</option>
-                      <option value="lisi">普通话-男声 (lisi)</option>
-                      <option value="tongtong">普通话-女声 (tongtong)</option>
-                      <option value="yina">普通话-女声 (yina)</option>
-                      <option value="xiaohong">普通话-女声 (xiaohong)</option>
-                      <option value="xiaoli">普通话-女声 (xiaoli)</option>
-                      {/* 方言 */}
-                      <option value="wangwu">四川话 (wangwu)</option>
-                      <option value="daming">粤语 (daming)</option>
-                      <option value="laowang">东北话 (laowang)</option>
-                      <option value="xiaozhang">方言-通用 (xiaozhang)</option>
+                      {/* 智谱官方支持的语音 */}
+                      <option value="tongtong">彤彤 (tongtong) - 默认女声</option>
+                      <option value="chuichui">锤锤 (chuichui) - 男声</option>
+                      <option value="xiaochen">小陈 (xiaochen) - 女声</option>
+                      <option value="jam">动物圈JAM (jam) - 特色音色</option>
+                      <option value="kazi">动物圈卡兹 (kazi) - 特色音色</option>
+                      <option value="douji">动物圈豆几 (douji) - 特色音色</option>
+                      <option value="luodo">动物圈洛多 (luodo) - 特色音色</option>
                     </select>
                  </div>
                  <div className="flex justify-between items-center">
@@ -479,16 +536,57 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                             // 确保API密钥已设置到服务中
                             aiService.setZhipuApiKey(savedApiKey);
                             
+                            // 显示加载状态
+                            const button = event.target as HTMLButtonElement;
+                            const originalText = button.textContent;
+                            button.disabled = true;
+                            button.textContent = '生成中...';
+                            
+                            console.log(`[语音预览] 测试语音: ${localProject.config.voiceName}`);
+                            
                             const audioData = await aiService.generateSpeech('您好，这是一个语音示例', localProject.config.voiceName, localProject.config.provider);
+                            
+                            // 恢复按钮状态
+                            button.disabled = false;
+                            button.textContent = originalText;
+                            
                             if (audioData) {
+                              console.log('[语音预览] 语音生成成功，开始播放');
                               const audio = new Audio(`data:audio/wav;base64,${audioData}`);
-                              audio.play();
+                              audio.play().catch(err => {
+                                console.error('[语音预览] 播放失败:', err);
+                                alert('音频播放失败，请检查浏览器音频权限');
+                              });
                             } else {
-                              alert('语音生成失败，请检查API密钥是否正确');
+                              console.error('[语音预览] 语音生成失败');
+                              alert(`语音生成失败。可能原因：\n1. 语音 "${localProject.config.voiceName}" 没有使用权限\n2. API密钥权限不足\n3. 网络连接问题\n\n请检查浏览器控制台获取详细错误信息。`);
                             }
                           } catch (error) {
                             console.error('语音预览失败:', error);
-                            alert('语音预览失败: ' + (error instanceof Error ? error.message : '未知错误'));
+                            
+                            // 恢复按钮状态
+                            const button = event.target as HTMLButtonElement;
+                            button.disabled = false;
+                            button.textContent = '预览音色';
+                            
+                            let errorMessage = '语音预览失败: ';
+                            if (error instanceof Error) {
+                              if (error.message.includes('401')) {
+                                errorMessage += 'API密钥认证失败';
+                              } else if (error.message.includes('403')) {
+                                errorMessage += `没有语音 "${localProject.config.voiceName}" 的使用权限`;
+                              } else if (error.message.includes('404')) {
+                                errorMessage += `语音 "${localProject.config.voiceName}" 不存在`;
+                              } else if (error.message.includes('429')) {
+                                errorMessage += '请求过于频繁，请稍后重试';
+                              } else {
+                                errorMessage += error.message;
+                              }
+                            } else {
+                              errorMessage += '未知错误';
+                            }
+                            
+                            alert(errorMessage + '\n\n建议：\n1. 尝试使用 "tongtong" 语音\n2. 检查API密钥是否正确\n3. 查看浏览器控制台获取详细信息');
                           }
                         }}
                         className="px-4 py-2 bg-amber-500 text-black font-bold rounded-xl text-xs hover:bg-amber-400 transition-all"
@@ -496,6 +594,15 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                         预览音色
                       </button>
                     </div>
+                 </div>
+                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-xs text-amber-800 font-medium">
+                      <strong>💡 语音使用提示：</strong><br/>
+                      • <strong>tongtong</strong> 是默认语音，通常都可以使用<br/>
+                      • 其他语音可能需要特定权限或付费账户<br/>
+                      • 如果某个语音无法使用，请尝试 tongtong<br/>
+                      • 详细错误信息请查看浏览器控制台
+                    </p>
                  </div>
               </div>
            </div>

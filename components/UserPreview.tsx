@@ -8,13 +8,74 @@ import {
   Upload, Image as ImageIcon, AlertCircle, CheckCircle, Loader2
 } from 'lucide-react';
 import { aiService, RealtimeCallback, Annotation } from '../services/aiService';
+import { projectService } from '../services/projectService';
 
-const UserPreview: React.FC<{ projects: ProductProject[] }> = ({ projects }) => {
+const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) => {
   const { projectId } = useParams();
-  const project = projects.find(p => p.id === projectId);
+  const [project, setProject] = useState<ProductProject | null>(null);
+  const [projectLoading, setProjectLoading] = useState(true);
+  const [projectError, setProjectError] = useState<string>('');
+
+  // 从服务端加载项目数据
+  useEffect(() => {
+    const loadProject = async () => {
+      if (!projectId) {
+        setProjectError('无效的项目ID');
+        setProjectLoading(false);
+        return;
+      }
+
+      try {
+        setProjectLoading(true);
+        
+        // 验证项目ID并获取项目数据
+        const validation = await projectService.validateProjectId(projectId);
+        
+        if (!validation.valid) {
+          setProjectError(validation.error || '项目验证失败');
+          setProjectLoading(false);
+          return;
+        }
+
+        setProject(validation.project!);
+        
+        // 记录用户访问（匿名统计）
+        await projectService.logUserAccess(projectId, {
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          referrer: document.referrer
+        });
+        
+        setProjectLoading(false);
+      } catch (error) {
+        console.error('Failed to load project:', error);
+        setProjectError('加载项目信息失败，请稍后重试');
+        setProjectLoading(false);
+      }
+    };
+
+    loadProject();
+  }, [projectId]);
+
+  // 项目加载中
+  if (projectLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1a103d] to-[#2d1b69] flex flex-col items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-[3rem] border-2 border-violet-500/30 p-8 shadow-2xl">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-violet-500/20 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Loader2 className="animate-spin" size={40} />
+            </div>
+            <h1 className="text-2xl font-black text-violet-800 mb-4">正在连接服务</h1>
+            <p className="text-slate-600">正在验证二维码并加载产品信息...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
-  // 处理项目不存在的情况
-  if (!project) {
+  // 处理项目不存在或验证失败的情况
+  if (!project || projectError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1a103d] to-[#2d1b69] flex flex-col items-center justify-center p-6">
         <div className="max-w-md w-full bg-white rounded-[3rem] border-2 border-amber-500/30 p-8 shadow-2xl">
@@ -23,7 +84,18 @@ const UserPreview: React.FC<{ projects: ProductProject[] }> = ({ projects }) => 
               <AlertCircle size={40} />
             </div>
             <h1 className="text-2xl font-black text-purple-800 mb-4">服务暂时不可用</h1>
-            <p className="text-slate-600 text-center">找不到对应的项目信息，请检查二维码是否正确，或联系我们的人工客服获取帮助。</p>
+            <p className="text-slate-600 text-center mb-4">
+              {projectError || '找不到对应的项目信息，请检查二维码是否正确。'}
+            </p>
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+              <p className="text-sm text-purple-800">
+                <strong>可能的原因：</strong><br/>
+                • 二维码已过期或无效<br/>
+                • 产品服务已暂停<br/>
+                • 网络连接问题<br/>
+                • 请联系中恒创世技术支持
+              </p>
+            </div>
           </div>
           
           <div className="space-y-4 mb-8">
@@ -34,8 +106,8 @@ const UserPreview: React.FC<{ projects: ProductProject[] }> = ({ projects }) => 
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
               </div>
               <div className="flex-1">
-                <p className="text-xs font-black text-purple-600 uppercase tracking-widest">客服电话</p>
-                <p className="text-purple-900 font-bold">400-123-4567</p>
+                <p className="text-xs font-black text-purple-600 uppercase tracking-widest">中恒创世技术支持</p>
+                <p className="text-purple-900 font-bold">400-888-6666</p>
               </div>
             </div>
             
@@ -78,6 +150,20 @@ const UserPreview: React.FC<{ projects: ProductProject[] }> = ({ projects }) => 
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [streamingMessage, setStreamingMessage] = useState<string | null>(null);
   const [streamingId, setStreamingId] = useState<number | null>(null);
+  
+  // 初始化AI服务（静默加载商家预配置的API密钥）
+  useEffect(() => {
+    const initializeAIService = () => {
+      // 尝试从localStorage加载商家预配置的API密钥
+      const savedApiKey = localStorage.getItem('zhipuApiKey');
+      if (savedApiKey) {
+        aiService.setZhipuApiKey(savedApiKey);
+      }
+      // 如果没有localStorage中的密钥，aiService会自动使用环境变量中的密钥
+    };
+    
+    initializeAIService();
+  }, []);
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
@@ -127,14 +213,6 @@ const UserPreview: React.FC<{ projects: ProductProject[] }> = ({ projects }) => 
     return () => {
       cleanupVideoChat();
     };
-  }, []);
-
-  // 加载保存的API密钥
-  useEffect(() => {
-    const savedApiKey = localStorage.getItem('zhipuApiKey');
-    if (savedApiKey) {
-      aiService.setZhipuApiKey(savedApiKey);
-    }
   }, []);
 
   if (!project) return <div className="p-10 text-center text-white bg-slate-900 h-screen flex items-center justify-center">Invalid Project</div>;
@@ -410,14 +488,6 @@ const UserPreview: React.FC<{ projects: ProductProject[] }> = ({ projects }) => 
     setIsTyping(true);
 
     try {
-      // 检查API密钥是否已在Settings中配置
-      const savedApiKey = localStorage.getItem('zhipuApiKey');
-      if (!savedApiKey || savedApiKey === 'your_zhipu_api_key_here') {
-        setMessages(prev => [...prev, { role: 'assistant', text: "请先在设置页面配置智谱AI密钥后再使用AI功能。" }]);
-        setIsTyping(false);
-        return;
-      }
-
       if (image) {
         if (!project.config.multimodalEnabled) {
           setMessages(prev => [...prev, { role: 'assistant', text: "多模态分析功能已禁用，无法分析图片内容。" }]);
@@ -502,7 +572,22 @@ const UserPreview: React.FC<{ projects: ProductProject[] }> = ({ projects }) => 
         );
       }
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', text: "Service busy. 请稍后再试。" }]);
+      console.error('AI服务调用失败:', e);
+      
+      // 根据错误类型给出不同的用户友好提示
+      let errorMessage = "抱歉，AI服务暂时不可用。";
+      
+      if (e instanceof Error) {
+        if (e.message.includes('401') || e.message.includes('API key')) {
+          errorMessage = "AI服务配置异常，请联系中恒创世技术支持：400-888-6666";
+        } else if (e.message.includes('429')) {
+          errorMessage = "服务繁忙，请稍后重试。";
+        } else if (e.message.includes('network') || e.message.includes('fetch')) {
+          errorMessage = "网络连接异常，请检查网络后重试。";
+        }
+      }
+      
+      setMessages(prev => [...prev, { role: 'assistant', text: errorMessage }]);
       setStreamingId(null);
       setStreamingMessage(null);
     } finally {
