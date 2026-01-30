@@ -84,11 +84,22 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
         }
 
         console.log('项目验证成功:', validation.project);
-        setProject(validation.project!);
+        const validatedProject = validation.project!;
+        setProject(validatedProject);
+        
+        // 检查知识库
+        if (validatedProject.knowledgeBase && validatedProject.knowledgeBase.length > 0) {
+          console.log('知识库加载成功:', validatedProject.knowledgeBase.length, '条条目');
+        } else {
+          console.log('知识库为空，使用默认知识');
+        }
         
         // 初始化messages状态
         setMessages([
-          { role: 'assistant', text: `您好！我是 ${validation.project!.name} 的 AI 专家。我已经加载了最新的产品说明书和视频教程，请问有什么可以帮您？` }
+          { 
+            role: 'assistant', 
+            text: `您好！我是 ${validatedProject.name} 的 AI 专家。我已经加载了最新的产品说明书和视频教程，请问有什么可以帮您？` 
+          }
         ]);
         
         // 记录用户访问（匿名统计）
@@ -98,7 +109,7 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
           referrer: document.referrer
         });
         
-        console.log('项目加载完成');
+        console.log('项目加载完成，准备提供服务');
         setProjectLoading(false);
       } catch (error) {
         console.error('Failed to load project:', error);
