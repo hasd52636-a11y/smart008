@@ -1117,17 +1117,20 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
               </div>
             </div>
             
-            {project.config.videoGuides.length > 0 && (
+            {project.config.videoGuides.filter(v => v.status === 'approved' || !v.status).length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                {project.config.videoGuides.map(v => (
-                  <button 
-                    key={v.id}
-                    onClick={() => setActiveVideo(v.url)}
-                    className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-300 whitespace-nowrap"
-                  >
-                    <PlayCircle size={14} className="text-violet-500" /> {v.title}
-                  </button>
-                ))}
+                {project.config.videoGuides
+                  .filter(v => v.status === 'approved' || !v.status) // 只显示已通过审核的视频，兼容旧数据
+                  .map(v => (
+                    <button 
+                      key={v.id}
+                      onClick={() => setActiveVideo(v.url)}
+                      className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-300 whitespace-nowrap"
+                    >
+                      <PlayCircle size={14} className="text-violet-500" /> {v.title}
+                    </button>
+                  ))
+                }
               </div>
             )}
           </header>
@@ -1282,14 +1285,13 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
                       
                       // 调用AI服务生成视频
                       setIsTyping(true);
-                      const videoUrl = await aiService.generateVideoGuide(prompt, project?.config.provider || 'ZHIPU');
+                      const videoResult = await aiService.generateVideoGuide(prompt, project?.config.provider || 'ZHIPU');
                       
-                      if (videoUrl) {
-                        // 将生成的视频添加到消息列表
+                      if (videoResult) {
+                        // 提示用户视频已提交审核
                         setMessages(prev => [...prev, { 
                           role: 'assistant', 
-                          text: '视频生成成功！您可以点击下方链接查看生成的视频。',
-                          image: videoUrl
+                          text: '视频生成请求已提交！我们的团队将尽快审核并添加到知识库中。审核通过后，您可以在产品指南中查看生成的视频。' 
                         }]);
                       } else {
                         setMessages(prev => [...prev, { role: 'assistant', text: '视频生成失败，请稍后重试。' }]);

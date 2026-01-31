@@ -527,11 +527,37 @@ export class AIService {
       const result = await response.json();
       // 轮询获取视频生成结果
       const videoResult = await this.pollVideoGeneration(result.id, key);
-      return videoResult.video_url;
+      return {
+        url: videoResult.video_url,
+        status: 'approved',
+        title: prompt.substring(0, 50),
+        description: prompt,
+        type: 'ai',
+        metadata: {
+          script: videoScript.choices[0].message.content,
+          duration: 60,
+          resolution: '1920x1080',
+          format: 'mp4'
+        }
+      };
       */
       
-      // 返回示例视频URL（实际部署时替换为真实的视频生成服务）
-      return "https://cdn.bigmodel.cn/static/platform/videos/doc_solutions/Realtime-%E5%94%B1%E6%AD%8C.m4v";
+      // 返回示例视频信息（实际部署时替换为真实的视频生成服务）
+      return {
+        url: "https://cdn.bigmodel.cn/static/platform/videos/doc_solutions/Realtime-%E5%94%B1%E6%AD%8C.m4v",
+        status: 'pending',
+        title: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
+        description: prompt,
+        type: 'ai',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          script: videoScript.choices[0].message.content,
+          duration: 60,
+          resolution: '1920x1080',
+          format: 'mp4',
+          generatedBy: 'CogVideoX-3'
+        }
+      };
     } catch (error) {
       console.error('Error generating video guide:', error);
       throw error;

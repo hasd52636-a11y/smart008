@@ -24,6 +24,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [videoDescription, setVideoDescription] = useState('');
   const [videoImageFile, setVideoImageFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
+  const [uploadFileName, setUploadFileName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const videoImageInputRef = useRef<HTMLInputElement>(null);
@@ -76,25 +79,64 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // 显示上传进度
+    setUploadFileName(file.name);
+    setUploadProgress(0);
+    setUploadStatus('正在上传...');
+
     const reader = new FileReader();
-    reader.onload = () => {
-      const newVideo: VideoGuide = {
-        id: `v_${Date.now()}`,
-        title: file.name,
-        url: reader.result as string,
-        type: 'upload',
-        status: 'ready'
-      };
-      if (localProject) {
-        setLocalProject({
-          ...localProject,
-          config: {
-            ...localProject.config,
-            videoGuides: [...localProject.config.videoGuides, newVideo]
-          }
-        });
+    
+    // 监听进度事件
+    reader.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const progress = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(progress);
+        setUploadStatus(`上传中... ${progress}%`);
       }
     };
+    
+    reader.onload = () => {
+      setUploadProgress(100);
+      setUploadStatus('上传完成，处理中...');
+      
+      // 模拟处理时间
+      setTimeout(() => {
+        const newVideo: VideoGuide = {
+          id: `v_${Date.now()}`,
+          title: file.name,
+          url: reader.result as string,
+          type: 'upload',
+          status: 'pending', // 上传的视频也需要审核
+          createdAt: new Date().toISOString()
+        };
+        if (localProject) {
+          setLocalProject({
+            ...localProject,
+            config: {
+              ...localProject.config,
+              videoGuides: [...localProject.config.videoGuides, newVideo]
+            }
+          });
+        }
+        
+        // 清除上传状态
+        setTimeout(() => {
+          setUploadProgress(null);
+          setUploadStatus('');
+          setUploadFileName('');
+        }, 1000);
+      }, 1500);
+    };
+    
+    reader.onerror = () => {
+      setUploadStatus('上传失败');
+      setTimeout(() => {
+        setUploadProgress(null);
+        setUploadStatus('');
+        setUploadFileName('');
+      }, 2000);
+    };
+    
     reader.readAsDataURL(file);
   };
 
@@ -240,8 +282,8 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                         }
                         
                         // 调用AI服务生成视频
-                        const url = await aiService.generateVideoGuide(prompt, localProject.config.provider);
-                        if (localProject) {
+                        const videoResult = await aiService.generateVideoGuide(prompt, localProject.config.provider);
+                        if (localProject && videoResult) {
                           setLocalProject({
                             ...localProject,
                             config: {
@@ -249,11 +291,12 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                               videoGuides: [...localProject.config.videoGuides, { 
                                 id: `v_${Date.now()}`, 
                                 title: videoDescription ? videoDescription.substring(0, 50) + (videoDescription.length > 50 ? '...' : '') : 'AI Generated Guide', 
-                                url: url || '', 
+                                url: typeof videoResult === 'string' ? videoResult : videoResult.url || '', 
                                 type: 'ai', 
-                                status: 'ready',
+                                status: 'pending', // 初始状态为待审核
                                 description: videoDescription,
-                                hasImage: !!videoImageFile
+                                hasImage: !!videoImageFile,
+                                createdAt: new Date().toISOString()
                               }]
                             }
                           });
@@ -284,8 +327,36 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                     <h4 className="text-xl font-bold text-slate-800">商家专业上传 Upload</h4>
                     <p className="text-sm text-slate-600 mt-2">上传 100% 准确的实拍安装视频（推荐）。</p>
                   </div>
-                  <button onClick={() => videoInputRef.current?.click()} className="mt-8 py-4 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-2xl font-black text-xs uppercase hover:bg-amber-500 hover:text-slate-900 transition-all">
-                    Upload MP4/MOV
+                  
+                  {/* 上传进度显示 */}
+                  {uploadProgress !== null && (
+                    <div className="mt-6 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-black text-slate-600 uppercase tracking-widest">
+                          {uploadFileName}
+                        </span>
+                        <span className="text-xs font-black text-amber-600">
+                          {uploadProgress}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-amber-400 to-amber-600 h-2 rounded-full transition-all duration-300 ease-out" 
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-slate-500 text-center">
+                        {uploadStatus}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <button 
+                    onClick={() => videoInputRef.current?.click()} 
+                    disabled={uploadProgress !== null}
+                    className="mt-8 py-4 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-2xl font-black text-xs uppercase hover:bg-amber-500 hover:text-slate-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {uploadProgress !== null ? '上传中...' : 'Upload MP4/MOV'}
                   </button>
                   <input type="file" ref={videoInputRef} onChange={handleManualVideoUpload} accept="video/*" className="hidden" />
                 </div>
@@ -511,13 +582,53 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-violet-500/20"><Video size={40}/></div>
                     )}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
-                       <button onClick={() => {
-                         if (localProject) {
-                           setLocalProject({...localProject, config: {...localProject.config, videoGuides: localProject.config.videoGuides.filter(vg => vg.id !== v.id)}});
-                         }
-                       }} className="p-3 bg-red-500/20 text-red-400 rounded-full"><Trash2 size={20}/></button>
-                       <span className="text-[10px] text-white font-black uppercase tracking-widest">{v.type}</span>
+                    
+                    {/* 审核状态标记 */}
+                    <div className="absolute top-3 left-3 z-10">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${v.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : v.status === 'approved' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {v.status === 'pending' ? '待审核' : v.status === 'approved' ? '已通过' : '已拒绝'}
+                      </span>
+                    </div>
+                    
+                    {/* 视频类型标记 */}
+                    <div className="absolute top-3 right-3 z-10">
+                      <span className="px-3 py-1 bg-white/20 text-white rounded-full text-[10px] font-black uppercase tracking-widest">
+                        {v.type === 'upload' ? '上传' : 'AI生成'}
+                      </span>
+                    </div>
+                    
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-4 p-4">
+                       {/* 审核按钮 */}
+                       {v.status === 'pending' && (
+                         <div className="flex gap-2 mb-4">
+                           <button onClick={() => {
+                             if (localProject) {
+                               const updatedVideos = localProject.config.videoGuides.map(vg => 
+                                 vg.id === v.id ? { ...vg, status: 'approved' } : vg
+                               );
+                               setLocalProject({...localProject, config: {...localProject.config, videoGuides: updatedVideos}});
+                             }
+                           }} className="px-4 py-2 bg-green-500/20 text-green-400 rounded-full text-xs font-black"><CheckCircle size={16}/> 通过</button>
+                           <button onClick={() => {
+                             if (localProject) {
+                               const updatedVideos = localProject.config.videoGuides.map(vg => 
+                                 vg.id === v.id ? { ...vg, status: 'rejected' } : vg
+                               );
+                               setLocalProject({...localProject, config: {...localProject.config, videoGuides: updatedVideos}});
+                             }
+                           }} className="px-4 py-2 bg-red-500/20 text-red-400 rounded-full text-xs font-black"><X size={16}/> 拒绝</button>
+                         </div>
+                       )}
+                       
+                       {/* 基本操作 */}
+                       <div className="flex items-center gap-4">
+                         <button onClick={() => {
+                           if (localProject) {
+                             setLocalProject({...localProject, config: {...localProject.config, videoGuides: localProject.config.videoGuides.filter(vg => vg.id !== v.id)}});
+                           }
+                         }} className="p-3 bg-red-500/20 text-red-400 rounded-full"><Trash2 size={20}/></button>
+                         <span className="text-[10px] text-white font-black uppercase tracking-widest">{v.type}</span>
+                       </div>
                     </div>
                   </div>
                 ))}
