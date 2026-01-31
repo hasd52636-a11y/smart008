@@ -1241,21 +1241,18 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 {project.config.visionEnabled && (
-                  <button onClick={() => fileInputRef.current?.click()} className="p-3 bg-white/5 border border-white/10 rounded-xl text-violet-400">
-                    <Camera size={20} />
-                  </button>
+                  <div className="relative group">
+                    <button 
+                      onClick={() => fileInputRef.current?.click()} 
+                      className="p-3 bg-white/5 border border-white/10 rounded-xl text-violet-400"
+                    >
+                      <Camera size={20} />
+                    </button>
+                    <div className="absolute -bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-2 text-[10px] font-black text-white opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-50">
+                      上传图片
+                    </div>
+                  </div>
                 )}
-                <button
-                  onClick={openOcrFilePicker}
-                  disabled={isOcrProcessing}
-                  className={`p-3 rounded-xl border ${isOcrProcessing ? 'bg-white/5 border-white/10 text-gray-400' : 'bg-white/5 border-white/10 text-violet-400'}`}
-                >
-                  {isOcrProcessing ? (
-                    <Loader2 className="animate-spin" size={20} />
-                  ) : (
-                    <FileText size={20} />
-                  )}
-                </button>
                 <button onClick={isRecording ? stopRecording : startRecording} className={`p-3 rounded-xl border ${isRecording ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-white/5 border-white/10 text-violet-400'}`}>
                   <Mic size={20} />
                 </button>
@@ -1284,7 +1281,17 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
             
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) { const r = new FileReader(); r.onload = () => handleSend("分析照片 Analyze photo", r.result as string); r.readAsDataURL(f); }
+              if (f) {
+                // 同时处理图片分析和OCR
+                const r = new FileReader();
+                r.onload = () => {
+                  // 发送图片分析请求
+                  handleSend("分析照片 Analyze photo", r.result as string);
+                  // 同时进行OCR处理
+                  processOcrImage(f);
+                };
+                r.readAsDataURL(f);
+              }
             }} />
           </div>
         </>
