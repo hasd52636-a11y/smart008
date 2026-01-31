@@ -658,10 +658,19 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
 
         // 流式回调函数
         let accumulatedMessage = '';
+        let lastUpdateTime = 0;
+        const UPDATE_INTERVAL = 100; // 限制更新频率，避免频繁渲染
+        
         const streamCallback = (chunk: string, isDone: boolean) => {
           if (chunk) {
             accumulatedMessage += chunk;
-            setStreamingMessage(accumulatedMessage);
+            
+            // 限制更新频率，避免频繁渲染
+            const now = Date.now();
+            if (now - lastUpdateTime > UPDATE_INTERVAL || isDone) {
+              setStreamingMessage(accumulatedMessage);
+              lastUpdateTime = now;
+            }
           }
           if (isDone) {
             if (accumulatedMessage) {
@@ -674,18 +683,38 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
 
         // 调用AI服务，使用流式输出
         console.log('调用AI服务获取智能响应...');
-        await aiService.getSmartResponse(
-          msgText, 
-          knowledgeBase, 
-          project.config.provider, 
-          project.config.systemInstruction,
-          {
-            stream: true,
-            callback: streamCallback,
-            tools: tools
+        
+        // 添加超时处理
+        const timeoutPromise = new Promise<void>((_, reject) => {
+          setTimeout(() => reject(new Error('AI服务响应超时')), 30000); // 30秒超时
+        });
+        
+        try {
+          await Promise.race([
+            aiService.getSmartResponse(
+              msgText, 
+              knowledgeBase, 
+              project.config.provider, 
+              project.config.systemInstruction,
+              {
+                stream: true,
+                callback: streamCallback,
+                tools: tools
+              }
+            ),
+            timeoutPromise
+          ]);
+          console.log('AI服务调用完成');
+        } catch (error) {
+          if (error instanceof Error && error.message === 'AI服务响应超时') {
+            console.error('AI服务响应超时');
+            setMessages(prev => [...prev, { role: 'assistant', text: 'AI服务响应超时，请稍后重试。' }]);
+            setStreamingId(null);
+            setStreamingMessage(null);
+          } else {
+            throw error;
           }
-        );
-        console.log('AI服务调用完成');
+        }
       }
     } catch (e) {
       console.error('AI服务调用失败:', e);

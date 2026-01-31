@@ -1,7 +1,8 @@
 
 import { KnowledgeItem, AIProvider } from "../types";
 
-const ZHIPU_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4';
+// 本地后端代理地址（生产环境中应该配置为实际的后端服务器地址）
+const ZHIPU_BASE_URL = 'http://localhost:3002/api/zhipu';
 
 // 智谱模型类型
 export enum ZhipuModel {
@@ -59,35 +60,16 @@ export interface Annotation {
 }
 
 export class AIService {
-  private zhipuApiKey: string | undefined;
   private realtimeWebSocket: WebSocket | null = null;
   private realtimeCallbacks: RealtimeCallback[] = [];
   private streamId: string | null = null;
   private isRealtimeConnected: boolean = false;
 
-  // 设置智谱API密钥
-  setZhipuApiKey(key: string) {
-    this.zhipuApiKey = key;
-  }
-
-  // 获取智谱API密钥（优先使用用户设置的密钥，其次使用环境变量）
-  private getZhipuApiKey(): string {
-    return this.zhipuApiKey || process.env.ZHIPU_API_KEY || process.env.API_KEY || '';
-  }
-
   private async zhipuFetch(endpoint: string, body: any, isBinary: boolean = false) {
-    const key = this.getZhipuApiKey();
-    
-    // 检查API密钥是否存在
-    if (!key) {
-      throw new Error('No Zhipu API key provided');
-    }
-    
     try {
       const response = await fetch(`${ZHIPU_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${key}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
@@ -113,18 +95,10 @@ export class AIService {
 
   // 智谱流式请求
   private async zhipuStreamFetch(endpoint: string, body: any, callback: StreamCallback) {
-    const key = this.getZhipuApiKey();
-    
-    // 检查API密钥是否存在
-    if (!key) {
-      throw new Error('No Zhipu API key provided');
-    }
-    
     try {
       const response = await fetch(`${ZHIPU_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${key}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
@@ -980,12 +954,9 @@ export class AIService {
       formData.append('language_type', options?.languageType || 'CHN_ENG');
       formData.append('probability', String(options?.probability || false));
 
-      console.log('Sending OCR request...');
-      const response = await fetch(`${ZHIPU_BASE_URL}/files/ocr`, {
+      console.log('Sending OCR request to local proxy...');
+      const response = await fetch('http://localhost:3002/api/ocr', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${key}`,
-        },
         body: formData,
       });
 
