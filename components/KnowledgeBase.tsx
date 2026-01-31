@@ -26,6 +26,8 @@ const KnowledgeBase: React.FC = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [newDocument, setNewDocument] = useState({ title: '', content: '' });
   const [message, setMessage] = useState({ type: 'info' as 'info' | 'success' | 'error', text: '' });
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 加载示例文档
@@ -653,14 +655,45 @@ SmartHome Pro Hub是一款功能强大的智能家居控制中心，支持连接
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFile(file);
+      setUploadProgress(0);
+      setUploadStatus('正在上传...');
+      
       const reader = new FileReader();
+      
+      // 监听进度事件
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(progress);
+          setUploadStatus(`上传中... ${progress}%`);
+        }
+      };
+      
       reader.onload = (event) => {
+        setUploadProgress(100);
+        setUploadStatus('上传完成，处理中...');
+        
         const content = event.target?.result as string;
         setNewDocument({
           title: file.name,
           content
         });
+        
+        // 模拟处理时间
+        setTimeout(() => {
+          setUploadProgress(null);
+          setUploadStatus('');
+        }, 1000);
       };
+      
+      reader.onerror = () => {
+        setUploadStatus('上传失败');
+        setTimeout(() => {
+          setUploadProgress(null);
+          setUploadStatus('');
+        }, 2000);
+      };
+      
       reader.readAsText(file);
     }
   };
@@ -672,21 +705,75 @@ SmartHome Pro Hub是一款功能强大的智能家居控制中心，支持连接
       return;
     }
 
-    const doc: KnowledgeDocument = {
-      id: Date.now().toString(),
-      title: newDocument.title,
-      content: newDocument.content,
-      createdAt: new Date(),
-      vectorized: false
-    };
+    setUploadProgress(0);
+    setUploadStatus('正在向量化...');
 
-    setDocuments(prev => [...prev, doc]);
-    setNewDocument({ title: '', content: '' });
-    setUploadedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    try {
+      // 创建文档对象
+      const doc: KnowledgeDocument = {
+        id: Date.now().toString(),
+        title: newDocument.title,
+        content: newDocument.content,
+        createdAt: new Date(),
+        vectorized: false
+      };
+
+      // 向量化文档内容
+      setIsVectorizing(true);
+      
+      // 模拟向量化进度
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev === null || prev >= 90) {
+            clearInterval(progressInterval);
+            return prev || 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      const embeddingResult = await aiService.createEmbedding(doc.content, {
+        model: ZhipuModel.EMBEDDING_3,
+        dimensions: 768
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      setUploadStatus('已存放到多维知识库');
+
+      // 更新文档为已向量化
+      const vectorizedDoc = {
+        ...doc,
+        embedding: embeddingResult.data[0].embedding,
+        vectorized: true
+      };
+
+      // 添加到知识库
+      setDocuments(prev => [...prev, vectorizedDoc]);
+      setNewDocument({ title: '', content: '' });
+      setUploadedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      // 清除上传状态
+      setTimeout(() => {
+        setUploadProgress(null);
+        setUploadStatus('');
+      }, 1500);
+
+      showMessage('success', '文档添加成功，已存放到多维知识库');
+    } catch (error) {
+      console.error('文档向量化失败:', error);
+      setUploadStatus('向量化失败');
+      setTimeout(() => {
+        setUploadProgress(null);
+        setUploadStatus('');
+      }, 2000);
+      showMessage('error', '文档向量化失败，请检查API密钥是否正确');
+    } finally {
+      setIsVectorizing(false);
     }
-    showMessage('success', '文档添加成功');
   };
 
   // 删除文档
@@ -900,6 +987,29 @@ SmartHome Pro Hub是一款功能强大的智能家居控制中心，支持连接
                   )}
                 </div>
               </div>
+              
+              {/* 上传进度显示 */}
+              {uploadProgress !== null && (
+                <div className="mb-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-gray-600 uppercase tracking-widest">
+                      {uploadedFile?.name || 'Document'}
+                    </span>
+                    <span className="text-xs font-black text-amber-600">
+                      {uploadProgress}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-amber-400 to-amber-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {uploadStatus}
+                  </p>
+                </div>
+              )}
 
               <button
                 onClick={addDocument}

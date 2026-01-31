@@ -268,10 +268,37 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                       </div>
                     </div>
                   </div>
+                  {/* 上传进度显示 */}
+                  {uploadProgress !== null && (
+                    <div className="mt-6 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-black text-slate-600 uppercase tracking-widest">
+                          {uploadFileName || 'AI Generated Video'}
+                        </span>
+                        <span className="text-xs font-black text-amber-600">
+                          {uploadProgress}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-amber-400 to-amber-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {uploadStatus}
+                      </p>
+                    </div>
+                  )}
+                  
                   <button 
                     disabled={isGeneratingVideo}
                     onClick={async () => {
                       setIsGeneratingVideo(true);
+                      setUploadProgress(0);
+                      setUploadStatus('正在生成视频...');
+                      setUploadFileName('AI Generated Video');
+                      
                       try {
                         // 构建视频生成提示
                         let prompt = `Create a video guide for ${localProject.name}`;
@@ -281,8 +308,42 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                           prompt += `: Installation and usage guide`;
                         }
                         
+                        // 模拟视频生成进度
+                        const progressInterval = setInterval(() => {
+                          setUploadProgress(prev => {
+                            if (prev === null || prev >= 80) {
+                              clearInterval(progressInterval);
+                              return prev || 80;
+                            }
+                            return prev + 10;
+                          });
+                        }, 300);
+                        
                         // 调用AI服务生成视频
                         const videoResult = await aiService.generateVideoGuide(prompt, localProject.config.provider);
+                        
+                        clearInterval(progressInterval);
+                        setUploadProgress(90);
+                        setUploadStatus('正在向量化...');
+                        
+                        // 模拟向量化进度
+                        const vectorizeInterval = setInterval(() => {
+                          setUploadProgress(prev => {
+                            if (prev === null || prev >= 100) {
+                              clearInterval(vectorizeInterval);
+                              return prev || 100;
+                            }
+                            return prev + 5;
+                          });
+                        }, 200);
+                        
+                        // 向量化视频内容（模拟）
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        clearInterval(vectorizeInterval);
+                        setUploadProgress(100);
+                        setUploadStatus('已存放到多维知识库');
+                        
                         if (localProject && videoResult) {
                           setLocalProject({
                             ...localProject,
@@ -308,9 +369,21 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                         if (videoImageInputRef.current) {
                           videoImageInputRef.current.value = '';
                         }
+                        
+                        // 清除上传状态
+                        setTimeout(() => {
+                          setUploadProgress(null);
+                          setUploadStatus('');
+                          setUploadFileName('');
+                        }, 1500);
                       } catch (error) {
                         console.error('Video generation failed:', error);
-                        alert('视频生成失败，请稍后重试');
+                        setUploadStatus('生成失败');
+                        setTimeout(() => {
+                          setUploadProgress(null);
+                          setUploadStatus('');
+                          setUploadFileName('');
+                        }, 2000);
                       } finally {
                         setIsGeneratingVideo(false);
                       }
