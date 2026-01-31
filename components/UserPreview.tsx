@@ -657,13 +657,15 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
         setStreamingMessage('');
 
         // 流式回调函数
+        let accumulatedMessage = '';
         const streamCallback = (chunk: string, isDone: boolean) => {
           if (chunk) {
-            setStreamingMessage(prev => (prev || '') + chunk);
+            accumulatedMessage += chunk;
+            setStreamingMessage(accumulatedMessage);
           }
           if (isDone) {
-            if (streamingMessage) {
-              setMessages(prev => [...prev, { role: 'assistant', text: streamingMessage }]);
+            if (accumulatedMessage) {
+              setMessages(prev => [...prev, { role: 'assistant', text: accumulatedMessage }]);
             }
             setStreamingId(null);
             setStreamingMessage(null);
