@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ProductProject, ProjectStatus, ProjectConfig, AIProvider } from './types';
 import { projectService } from './services/projectService';
+import { linkService } from './services/linkService';
 import Dashboard from './components/Dashboard';
 import ProjectList from './components/ProjectList';
 import ProjectDetail from './components/ProjectDetail';
@@ -33,6 +34,43 @@ import Settings from './components/Settings';
 import KnowledgeBase from './components/KnowledgeBase';
 import SmartSearch from './components/SmartSearch';
 import ErrorBoundary from './components/ErrorBoundary';
+
+// 链接入口处理组件 - 用于处理复杂链接的重定向
+const LinkEntryHandler: React.FC<{ projects: ProductProject[] }> = ({ projects }) => {
+  const { shortCode } = useParams<{ shortCode: string }>();
+  const navigate = useNavigate();
+  
+  React.useEffect(() => {
+    if (shortCode) {
+      // 根据shortCode获取对应的项目ID
+      const projectId = linkService.getProjectIdByShortCode(shortCode);
+      
+      if (projectId) {
+        // 重定向到对应的产品页面
+        navigate(`/view/${projectId}`);
+      } else {
+        // 如果找不到项目，重定向到首页
+        navigate('/');
+      }
+    } else {
+      // 如果没有shortCode，重定向到首页
+      navigate('/');
+    }
+  }, [shortCode, navigate]);
+  
+  // 显示加载状态
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#1a103d] to-[#2d1b69] flex flex-col items-center justify-center p-6">
+      <div className="max-w-md w-full bg-white rounded-[3rem] border-2 border-violet-500/30 p-12 shadow-2xl text-center">
+        <div className="w-16 h-16 bg-violet-500/20 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+          <MessageSquare size={32} />
+        </div>
+        <h2 className="text-2xl font-black text-violet-800 mb-4">正在进入...</h2>
+        <p className="text-slate-600">请稍候，正在为您准备服务...</p>
+      </div>
+    </div>
+  );
+};
 
 // 公共欢迎页面组件 - 用户访问根路径时显示
 const PublicWelcomePage: React.FC = () => {
@@ -223,6 +261,12 @@ const App: React.FC = () => {
           <Route path="/video/:id" element={
             <ErrorBoundary>
               <VideoChat />
+            </ErrorBoundary>
+          } />
+          {/* 链接入口路由 - 用于处理复杂链接的重定向 */}
+          <Route path="/entry/:shortCode" element={
+            <ErrorBoundary>
+              <LinkEntryHandler projects={projects} />
             </ErrorBoundary>
           } />
           

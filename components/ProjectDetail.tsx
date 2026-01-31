@@ -9,6 +9,7 @@ import {
   Send, Camera
 } from 'lucide-react';
 import { aiService } from '../services/aiService';
+import { linkService } from '../services/linkService';
 
 interface ProjectDetailProps {
   projects: ProductProject[];
@@ -140,10 +141,12 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
     reader.readAsDataURL(file);
   };
 
-  // 动态获取当前域名和端口，适配所有环境
-  const port = window.location.port ? `:${window.location.port}` : '';
-  const productGuideUrl = `${window.location.protocol}//${window.location.hostname}${port}${window.location.pathname}#/view/${id}`;
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(productGuideUrl)}&color=7c3aed&bgcolor=ffffff`;
+  // 使用链接服务获取下一个复杂链接（循环使用100个链接）
+  const complexLink = linkService.getNextLinkForProject(id);
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(complexLink)}&color=7c3aed&bgcolor=ffffff`;
+  
+  // 获取项目的所有链接（用于管理）
+  const allProjectLinks = linkService.getAllLinksForProject(id);
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -737,8 +740,15 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                    }} className="px-8 py-3.5 gold-gradient-btn text-slate-900 font-black rounded-2xl text-sm flex items-center gap-2">
                       <Download size={20}/> Download PNG
                    </button>
-                   <button onClick={() => window.open(`#/view/${id}`, '_blank')} className="px-8 py-3.5 bg-slate-100 border border-slate-200 text-slate-800 font-black rounded-2xl text-sm">
-                      Preview 预览
+                   <button onClick={() => window.open(complexLink, '_blank')} className="px-8 py-3.5 bg-slate-100 border border-slate-200 text-slate-800 font-black rounded-2xl text-sm">
+                     Preview 预览
+                   </button>
+                   <button onClick={() => {
+                     // 生成新的100个链接
+                     const newLinks = linkService.generateLinksForProject(id);
+                     alert(`已为项目生成 ${newLinks.length} 个新链接`);
+                   }} className="px-8 py-3.5 bg-amber-500 text-black font-black rounded-2xl text-sm">
+                     刷新链接 Refresh Links
                    </button>
                 </div>
                </div>

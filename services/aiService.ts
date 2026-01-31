@@ -1,8 +1,8 @@
 
 import { KnowledgeItem, AIProvider } from "../types";
 
-// 本地后端代理地址（生产环境中应该配置为实际的后端服务器地址）
-const ZHIPU_BASE_URL = 'http://localhost:3002/api/zhipu';
+// Vercel Serverless Functions API地址
+const ZHIPU_BASE_URL = '/api/zhipu';
 
 // 智谱模型类型
 export enum ZhipuModel {
@@ -954,8 +954,8 @@ export class AIService {
       formData.append('language_type', options?.languageType || 'CHN_ENG');
       formData.append('probability', String(options?.probability || false));
 
-      console.log('Sending OCR request to local proxy...');
-      const response = await fetch('http://localhost:3002/api/ocr', {
+      console.log('Sending OCR request to Vercel Serverless Function...');
+      const response = await fetch('/api/ocr', {
         method: 'POST',
         body: formData,
       });
