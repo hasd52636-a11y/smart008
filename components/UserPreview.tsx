@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ProductProject, AIProvider, KnowledgeType } from '../types';
@@ -270,9 +269,6 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
     );
   }
 
-  // 项目验证已经在前面的逻辑中处理，移除重复的检查
-  // 确保project存在后再渲染后续内容
-
   // Video chat functions
   const toggleVideoChat = async () => {
     if (isVideoChatActive) {
@@ -285,6 +281,18 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
   const initializeVideoChat = async () => {
     try {
       console.log('开始初始化视频聊天...');
+      
+      // 检查API密钥是否存在
+      const savedApiKey = localStorage.getItem('zhipuApiKey');
+      if (!savedApiKey) {
+        console.error('视频客服连接失败: 缺少API密钥');
+        setMessages(prev => [...prev, { role: 'assistant', text: '视频客服连接失败，请联系管理员配置API密钥。' }]);
+        return;
+      }
+      
+      // 确保API密钥已设置到AI服务
+      aiService.setZhipuApiKey(savedApiKey);
+      console.log('API密钥已设置');
       
       // Request camera and microphone permissions
       console.log('请求摄像头和麦克风权限...');
@@ -319,7 +327,7 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
         setIsVideoChatActive(true);
       } else {
         console.error('GLM-Realtime连接失败');
-        setMessages(prev => [...prev, { role: 'assistant', text: '视频客服连接失败，请检查网络连接后重试。' }]);
+        setMessages(prev => [...prev, { role: 'assistant', text: '视频客服连接失败，请检查网络连接和API密钥配置。' }]);
         // 清理资源
         if (stream) {
           stream.getTracks().forEach(track => track.stop());
@@ -329,7 +337,17 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
       }
     } catch (error) {
       console.error('Failed to initialize video chat:', error);
-      setMessages(prev => [...prev, { role: 'assistant', text: '无法访问摄像头或麦克风，请检查权限设置。' }]);
+      let errorMessage = '无法访问摄像头或麦克风，请检查权限设置。';
+      if (error instanceof Error) {
+        if (error.message.includes('Permission denied')) {
+          errorMessage = '摄像头或麦克风权限被拒绝，请在浏览器设置中允许访问。';
+        } else if (error.message.includes('NotFoundError')) {
+          errorMessage = '未找到摄像头或麦克风设备。';
+        } else {
+          errorMessage = `视频初始化失败: ${error.message}`;
+        }
+      }
+      setMessages(prev => [...prev, { role: 'assistant', text: errorMessage }]);
     }
   };
 
@@ -568,6 +586,18 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
         if (!project.config.multimodalEnabled) {
           setMessages(prev => [...prev, { role: 'assistant', text: "多模态分析功能已禁用，无法分析图片内容。" }]);
         } else {
+          // 检查API密钥是否存在
+          const savedApiKey = localStorage.getItem('zhipuApiKey');
+          if (!savedApiKey) {
+            console.error('图片分析失败: 缺少API密钥');
+            setMessages(prev => [...prev, { role: 'assistant', text: '图片分析失败，请联系管理员配置API密钥。' }]);
+            return;
+          }
+          
+          // 确保API密钥已设置到AI服务
+          aiService.setZhipuApiKey(savedApiKey);
+          console.log('API密钥已设置');
+          
           // 图片分析暂时不使用流式输出
           console.log('开始分析图片...');
           const response = await aiService.analyzeInstallation(image, project.config.visionPrompt, project.config.provider);
@@ -703,6 +733,18 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
 
   const startRecording = async () => {
     try {
+      // 检查API密钥是否存在
+      const savedApiKey = localStorage.getItem('zhipuApiKey');
+      if (!savedApiKey) {
+        console.error('语音识别失败: 缺少API密钥');
+        setMessages(prev => [...prev, { role: 'assistant', text: '语音识别失败，请联系管理员配置API密钥。' }]);
+        return;
+      }
+      
+      // 确保API密钥已设置到AI服务
+      aiService.setZhipuApiKey(savedApiKey);
+      console.log('API密钥已设置');
+      
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
       const recorder = new MediaRecorder(stream);
@@ -720,7 +762,17 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
       recorder.start();
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('无法访问麦克风，请检查权限设置。');
+      let errorMessage = '无法访问麦克风，请检查权限设置。';
+      if (error instanceof Error) {
+        if (error.message.includes('Permission denied')) {
+          errorMessage = '麦克风权限被拒绝，请在浏览器设置中允许访问。';
+        } else if (error.message.includes('NotFoundError')) {
+          errorMessage = '未找到麦克风设备。';
+        } else {
+          errorMessage = `录音初始化失败: ${error.message}`;
+        }
+      }
+      setMessages(prev => [...prev, { role: 'assistant', text: errorMessage }]);
     }
   };
 
@@ -797,6 +849,19 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
         setOcrImage(imageUrl);
       };
       reader.readAsDataURL(file);
+      
+      // 检查API密钥是否存在
+      const savedApiKey = localStorage.getItem('zhipuApiKey');
+      if (!savedApiKey) {
+        console.error('OCR处理失败: 缺少API密钥');
+        showOcrMessage('error', 'OCR处理失败，请联系管理员配置API密钥。');
+        setIsOcrProcessing(false);
+        return;
+      }
+      
+      // 确保API密钥已设置到AI服务
+      aiService.setZhipuApiKey(savedApiKey);
+      console.log('API密钥已设置');
       
       // 调用 OCR 服务
       const ocrResult = await aiService.recognizeHandwriting(file, {
@@ -1159,7 +1224,8 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
             )}
           </div>
 
-          <div className="p-6 bg-[#0f1218]/80 backdrop-blur-3xl border-t border-white/5">
+          {/* 手机端优化：输入框单独一行 */}
+          <div className="p-4 bg-[#0f1218]/80 backdrop-blur-3xl border-t border-white/5">
             <input
               ref={ocrFileInputRef}
               type="file"
@@ -1167,48 +1233,99 @@ const UserPreview: React.FC<{ projects?: ProductProject[] }> = ({ projects }) =>
               onChange={handleOcrImageUpload}
               className="hidden"
             />
-            <div className="flex items-center gap-3">
-              {project.config.visionEnabled && (
-                <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-white/5 border border-white/10 rounded-2xl text-violet-400">
-                  <Camera size={22} />
-                </button>
-              )}
-              <button
-                onClick={openOcrFilePicker}
-                disabled={isOcrProcessing}
-                className={`p-4 rounded-2xl border ${isOcrProcessing ? 'bg-white/5 border-white/10 text-gray-400' : 'bg-white/5 border-white/10 text-violet-400'}`}
-              >
-                {isOcrProcessing ? (
-                  <Loader2 className="animate-spin" size={22} />
-                ) : (
-                  <FileText size={22} />
+            
+            {/* 功能按钮区 */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                {project.config.visionEnabled && (
+                  <button onClick={() => fileInputRef.current?.click()} className="p-3 bg-white/5 border border-white/10 rounded-xl text-violet-400">
+                    <Camera size={20} />
+                  </button>
                 )}
-              </button>
-              <button onClick={isRecording ? stopRecording : startRecording} className={`p-4 rounded-2xl border ${isRecording ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-white/5 border-white/10 text-violet-400'}`}>
-                <Mic size={22} />
-              </button>
-              {project.config.videoChatEnabled && (
-                <button onClick={toggleVideoChat} className="p-4 bg-white/5 border border-white/10 rounded-2xl text-violet-400">
-                  <Video size={22} />
+                <button
+                  onClick={openOcrFilePicker}
+                  disabled={isOcrProcessing}
+                  className={`p-3 rounded-xl border ${isOcrProcessing ? 'bg-white/5 border-white/10 text-gray-400' : 'bg-white/5 border-white/10 text-violet-400'}`}
+                >
+                  {isOcrProcessing ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    <FileText size={20} />
+                  )}
                 </button>
-              )}
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) { const r = new FileReader(); r.onload = () => handleSend("分析照片 Analyze photo", r.result as string); r.readAsDataURL(f); }
-              }} />
-              <div className="flex-1 relative">
-                <input 
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="问我关于此产品的问题..."
-                  className="w-full bg-white/5 border border-white/10 px-6 py-4 rounded-2xl text-sm text-white outline-none focus:ring-2 focus:ring-violet-500/20"
-                />
-                <button onClick={handleSend} className="absolute right-2 top-2 p-2.5 purple-gradient-btn text-white rounded-xl">
-                  <Send size={18} />
+                <button onClick={isRecording ? stopRecording : startRecording} className={`p-3 rounded-xl border ${isRecording ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-white/5 border-white/10 text-violet-400'}`}>
+                  <Mic size={20} />
+                </button>
+                {project.config.videoChatEnabled && (
+                  <button onClick={toggleVideoChat} className="p-3 bg-white/5 border border-white/10 rounded-xl text-violet-400">
+                    <Video size={20} />
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    try {
+                      // 检查API密钥是否存在
+                      const savedApiKey = localStorage.getItem('zhipuApiKey');
+                      if (!savedApiKey) {
+                        console.error('视频生成失败: 缺少API密钥');
+                        setMessages(prev => [...prev, { role: 'assistant', text: '视频生成失败，请联系管理员配置API密钥。' }]);
+                        return;
+                      }
+                      
+                      // 确保API密钥已设置到AI服务
+                      aiService.setZhipuApiKey(savedApiKey);
+                      console.log('API密钥已设置');
+                      
+                      // 构建视频生成提示
+                      let prompt = `Create a video guide for ${project?.name || 'product'}`;
+                      prompt += `: Installation and usage guide`;
+                      
+                      // 调用AI服务生成视频
+                      setIsTyping(true);
+                      const videoUrl = await aiService.generateVideoGuide(prompt, project?.config.provider || 'ZHIPU');
+                      
+                      if (videoUrl) {
+                        // 将生成的视频添加到消息列表
+                        setMessages(prev => [...prev, { 
+                          role: 'assistant', 
+                          text: '视频生成成功！您可以点击下方链接查看生成的视频。',
+                          image: videoUrl
+                        }]);
+                      } else {
+                        setMessages(prev => [...prev, { role: 'assistant', text: '视频生成失败，请稍后重试。' }]);
+                      }
+                    } catch (error) {
+                      console.error('视频生成失败:', error);
+                      setMessages(prev => [...prev, { role: 'assistant', text: '视频生成失败，请检查API密钥是否正确或网络连接是否正常。' }]);
+                    } finally {
+                      setIsTyping(false);
+                    }
+                  }}
+                  className="p-3 bg-white/5 border border-white/10 rounded-xl text-violet-400"
+                >
+                  <Sparkles size={20} />
                 </button>
               </div>
             </div>
+            
+            {/* 输入框单独一行 */}
+            <div className="relative">
+              <input 
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="问我关于此产品的问题..."
+                className="w-full bg-white/5 border border-white/10 px-5 py-4 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-violet-500/20 pr-16"
+              />
+              <button onClick={handleSend} className="absolute right-2 top-2 p-2 purple-gradient-btn text-white rounded-lg">
+                <Send size={18} />
+              </button>
+            </div>
+            
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) { const r = new FileReader(); r.onload = () => handleSend("分析照片 Analyze photo", r.result as string); r.readAsDataURL(f); }
+            }} />
           </div>
         </>
       )}

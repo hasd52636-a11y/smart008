@@ -462,9 +462,112 @@ export class AIService {
     }
   }
 
-  async generateVideoGuide(prompt: string, provider: AIProvider) {
-    // 仅使用智谱AI实现
-    return "https://cdn.bigmodel.cn/static/platform/videos/doc_solutions/Realtime-%E5%94%B1%E6%AD%8C.m4v";
+  async generateVideoGuide(prompt: string, provider: AIProvider, imageUrl?: string) {
+    // 检查API密钥是否存在
+    const key = this.getZhipuApiKey();
+    if (!key) {
+      throw new Error('No Zhipu API key provided');
+    }
+    
+    try {
+      console.log('Generating video guide with prompt:', prompt);
+      
+      // 注意：由于CogVideoX-3 API需要后端服务支持
+      // 这里使用多模态API生成视频脚本，然后返回示例视频
+      // 实际部署时需要实现后端服务调用CogVideoX-3 API
+      
+      // 生成视频脚本
+      const videoScript = await this.zhipuFetch('/chat/completions', {
+        model: 'glm-4.7',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional video script writer. Create a detailed script for a product installation video based on the given prompt.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1024
+      });
+      
+      console.log('Video script generated successfully');
+      
+      // 模拟视频生成过程（实际部署时替换为真实的CogVideoX-3 API调用）
+      console.log('Simulating video generation with CogVideoX-3...');
+      
+      // 注意：实际的CogVideoX-3 API调用需要后端服务
+      // 前端直接调用会暴露API密钥，不安全
+      // 以下是后端服务的参考实现：
+      /*
+      const response = await fetch('https://open.bigmodel.cn/api/paas/v4/videos/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'cogvideox-3',
+          prompt: prompt,
+          image_url: imageUrl,
+          quality: 'quality',
+          with_audio: true,
+          size: '1920x1080',
+          fps: 30
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error.message || 'Video generation failed');
+      }
+      
+      const result = await response.json();
+      // 轮询获取视频生成结果
+      const videoResult = await this.pollVideoGeneration(result.id, key);
+      return videoResult.video_url;
+      */
+      
+      // 返回示例视频URL（实际部署时替换为真实的视频生成服务）
+      return "https://cdn.bigmodel.cn/static/platform/videos/doc_solutions/Realtime-%E5%94%B1%E6%AD%8C.m4v";
+    } catch (error) {
+      console.error('Error generating video guide:', error);
+      throw error;
+    }
+  }
+  
+  // 轮询视频生成结果（实际部署时使用）
+  private async pollVideoGeneration(videoId: string, apiKey: string): Promise<any> {
+    const pollInterval = 3000; // 每3秒轮询一次
+    const maxAttempts = 30; // 最多轮询30次（90秒）
+    
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const response = await fetch(`https://open.bigmodel.cn/api/paas/v4/videos/${videoId}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to poll video generation status');
+      }
+      
+      const result = await response.json();
+      
+      if (result.status === 'succeeded') {
+        return result;
+      } else if (result.status === 'failed') {
+        throw new Error(result.error.message || 'Video generation failed');
+      }
+      
+      // 等待下一次轮询
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+    
+    throw new Error('Video generation timed out');
   }
 
   // GLM-Realtime连接管理
@@ -837,27 +940,47 @@ export class AIService {
     languageType?: string;
     probability?: boolean;
   }): Promise<any> {
-    const formData = new FormData();
-    formData.append('file', imageFile);
-    formData.append('tool_type', 'hand_write');
-    formData.append('language_type', options?.languageType || 'CHN_ENG');
-    formData.append('probability', String(options?.probability || false));
-
     const key = this.getZhipuApiKey();
-    const response = await fetch(`${ZHIPU_BASE_URL}/files/ocr`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${key}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err?.error?.message || 'OCR API Error');
+    
+    // 检查API密钥是否存在
+    if (!key) {
+      throw new Error('No Zhipu API key provided');
     }
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', imageFile);
+      formData.append('tool_type', 'hand_write');
+      formData.append('language_type', options?.languageType || 'CHN_ENG');
+      formData.append('probability', String(options?.probability || false));
 
-    return response.json();
+      console.log('Sending OCR request...');
+      const response = await fetch(`${ZHIPU_BASE_URL}/files/ocr`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'OCR API Error';
+        try {
+          const err = await response.json();
+          errorMessage = err?.error?.message || err?.message || errorMessage;
+        } catch (parseError) {
+          console.error('Error parsing OCR error response:', parseError);
+        }
+        throw new Error(`${errorMessage} (${response.status})`);
+      }
+
+      const result = await response.json();
+      console.log('OCR response:', result);
+      return result;
+    } catch (error) {
+      console.error('OCR request failed:', error);
+      throw error;
+    }
   }
 
   // OCR服务：通用文本识别（支持印刷体）

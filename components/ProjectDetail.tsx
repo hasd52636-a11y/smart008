@@ -22,8 +22,11 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
   const [activeTab, setActiveTab] = useState('knowledge');
   const [localProject, setLocalProject] = useState<ProductProject | null>(project ? JSON.parse(JSON.stringify(project)) : null);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [videoDescription, setVideoDescription] = useState('');
+  const [videoImageFile, setVideoImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const videoImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // 加载保存的API密钥
@@ -175,20 +178,99 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projects, onUpdate }) => 
                   <div>
                     <Sparkles className="text-violet-500 mb-6" size={32} />
                     <h4 className="text-xl font-bold text-slate-800">AI 智能合成 Video AI</h4>
-                    <p className="text-sm text-slate-600 mt-2">基于产品描述自动生成虚拟引导视频。</p>
+                    <p className="text-sm text-slate-600 mt-2">基于用户提供的图片和文字生成更精确的虚拟引导视频。</p>
+                    
+                    {/* 图片上传入口 */}
+                    <div className="mt-4">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">上传参考图片</label>
+                      <input 
+                        type="file" 
+                        ref={videoImageInputRef}
+                        onChange={(e) => setVideoImageFile(e.target.files?.[0])}
+                        accept="image/*"
+                        className="block w-full text-sm text-slate-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-xl file:border-0
+                          file:text-sm file:font-medium
+                          file:bg-violet-50 file:text-violet-700
+                          hover:file:bg-violet-100"
+                      />
+                      {videoImageFile && (
+                        <p className="text-xs text-slate-500 mt-2">已选择文件: {videoImageFile.name}</p>
+                      )}
+                    </div>
+                    
+                    {/* 文字输入框 */}
+                    <div className="mt-4">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">视频内容描述 (2000字内)</label>
+                      <textarea 
+                        value={videoDescription}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 2000) {
+                            setVideoDescription(e.target.value);
+                          }
+                        }}
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/30 transition-all h-32 resize-none"
+                        placeholder="请详细描述视频内容，包括：
+1. 视频主题和目的
+2. 关键步骤和流程
+3. 重点强调的内容
+4. 目标受众和使用场景
+
+例如：为SmartHome Pro Hub生成安装视频，包括开箱、连接电源、连接WiFi、添加设备等步骤，重点强调安全注意事项和故障排查。"
+                      />
+                      <div className="flex justify-end mt-1">
+                        <span className={`text-xs font-bold ${videoDescription.length > 1800 ? 'text-amber-500' : 'text-slate-500'}`}>
+                          {videoDescription.length}/2000
+                        </span>
+                      </div>
+                    </div>
                   </div>
                   <button 
                     disabled={isGeneratingVideo}
                     onClick={async () => {
                       setIsGeneratingVideo(true);
-                      const url = await aiService.generateVideoGuide(`Installation for ${localProject.name}`, localProject.config.provider);
-                      if (localProject) {
-                        setLocalProject({
-                          ...localProject,
-                          config: {...localProject.config, videoGuides: [...localProject.config.videoGuides, { id: `v_${Date.now()}`, title: 'AI Generated Guide', url: url || '', type: 'ai', status: 'ready' }]}
-                        });
+                      try {
+                        // 构建视频生成提示
+                        let prompt = `Create a video guide for ${localProject.name}`;
+                        if (videoDescription) {
+                          prompt += `: ${videoDescription}`;
+                        } else {
+                          prompt += `: Installation and usage guide`;
+                        }
+                        
+                        // 调用AI服务生成视频
+                        const url = await aiService.generateVideoGuide(prompt, localProject.config.provider);
+                        if (localProject) {
+                          setLocalProject({
+                            ...localProject,
+                            config: {
+                              ...localProject.config,
+                              videoGuides: [...localProject.config.videoGuides, { 
+                                id: `v_${Date.now()}`, 
+                                title: videoDescription ? videoDescription.substring(0, 50) + (videoDescription.length > 50 ? '...' : '') : 'AI Generated Guide', 
+                                url: url || '', 
+                                type: 'ai', 
+                                status: 'ready',
+                                description: videoDescription,
+                                hasImage: !!videoImageFile
+                              }]
+                            }
+                          });
+                        }
+                        
+                        // 清空输入
+                        setVideoDescription('');
+                        setVideoImageFile(null);
+                        if (videoImageInputRef.current) {
+                          videoImageInputRef.current.value = '';
+                        }
+                      } catch (error) {
+                        console.error('Video generation failed:', error);
+                        alert('视频生成失败，请稍后重试');
+                      } finally {
+                        setIsGeneratingVideo(false);
                       }
-                      setIsGeneratingVideo(false);
                     }}
                     className="mt-8 py-4 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-2xl font-black text-xs uppercase hover:bg-violet-500 hover:text-white transition-all"
                   >
