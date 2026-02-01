@@ -85,7 +85,7 @@ export class LinkService {
       const timestamp = Date.now() + i * 1000;
       const randomParams = `r=${Math.random().toString(36).substr(2, 9)}&t=${timestamp}`;
       
-      const fullLink = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}${window.location.pathname}#/entry/${shortCode}?${randomParams}&data=${complexPart}`;
+      const fullLink = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}${window.location.pathname.replace(/\/merchant\/?$/, '')}/entry/${shortCode}?${randomParams}&data=${complexPart}`;
       
       this.complexLinks.set(shortCode, fullLink);
       shortCodes.push(shortCode);
