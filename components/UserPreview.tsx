@@ -574,19 +574,31 @@ const UserPreview: React.FC<{ projects?: ProductProject[]; projectId?: string }>
   };
 
   const handleSend = async (text?: string, image?: string) => {
+    console.log('=== 开始处理发送消息 ===');
+    console.log('发送内容:', { text, image });
+    
     const msgText = text || inputValue;
-    if (!msgText && !image) return;
-    if (!project) return;
-
-    // 立即添加用户消息到界面
-    const userMessage = { role: 'user' as const, text: msgText, image };
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
-    setIsTyping(true);
+    if (!msgText && !image) {
+      console.log('消息为空，不处理');
+      return;
+    }
+    if (!project) {
+      console.error('项目不存在，无法处理消息');
+      return;
+    }
 
     try {
+      // 立即添加用户消息到界面
+      const userMessage = { role: 'user' as const, text: msgText, image };
+      console.log('添加用户消息:', userMessage);
+      setMessages(prev => [...prev, userMessage]);
+      setInputValue('');
+      setIsTyping(true);
+
       if (image) {
+        console.log('处理图片消息');
         if (!project.config.multimodalEnabled) {
+          console.log('多模态分析功能已禁用');
           setMessages(prev => [...prev, { role: 'assistant', text: "多模态分析功能已禁用，无法分析图片内容。" }]);
         } else {
           // 检查API密钥是否存在
@@ -608,12 +620,14 @@ const UserPreview: React.FC<{ projects?: ProductProject[]; projectId?: string }>
           setMessages(prev => [...prev, { role: 'assistant', text: response }]);
         }
       } else {
+        console.log('处理文本消息:', msgText);
         // 确保知识库存在
         const knowledgeBase = project.knowledgeBase || [];
-        console.log('发送文本消息:', msgText, '知识库大小:', knowledgeBase.length);
+        console.log('知识库大小:', knowledgeBase.length);
 
         // 对于文本消息，使用流式输出
         const newMessageId = messages.length + 1;
+        console.log('新消息ID:', newMessageId);
         setStreamingId(newMessageId);
         setStreamingMessage('');
 
@@ -623,17 +637,20 @@ const UserPreview: React.FC<{ projects?: ProductProject[]; projectId?: string }>
         const UPDATE_INTERVAL = 100; // 限制更新频率，避免频繁渲染
         
         const streamCallback = (chunk: string, isDone: boolean) => {
+          console.log('收到流式响应:', { chunk, isDone });
           if (chunk) {
             accumulatedMessage += chunk;
             
             // 限制更新频率，避免频繁渲染
             const now = Date.now();
             if (now - lastUpdateTime > UPDATE_INTERVAL || isDone) {
+              console.log('更新流式消息:', accumulatedMessage);
               setStreamingMessage(accumulatedMessage);
               lastUpdateTime = now;
             }
           }
           if (isDone) {
+            console.log('流式响应完成:', accumulatedMessage);
             if (accumulatedMessage) {
               setMessages(prev => [...prev, { role: 'assistant', text: accumulatedMessage }]);
             }
@@ -694,10 +711,12 @@ const UserPreview: React.FC<{ projects?: ProductProject[]; projectId?: string }>
         }
       }
       
+      console.log('显示错误消息:', errorMessage);
       setMessages(prev => [...prev, { role: 'assistant', text: errorMessage }]);
       setStreamingId(null);
       setStreamingMessage(null);
     } finally {
+      console.log('=== 消息处理完成 ===');
       setIsTyping(false);
     }
   };

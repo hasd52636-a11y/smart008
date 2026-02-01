@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直接链接测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #6d28d9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+        }
+        .success {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+        }
+        .qr-code {
+            margin: 20px 0;
+            text-align: center;
+        }
+        img {
+            max-width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>直接链接测试</h1>
+        <button onclick="generateDirectLink()">直接生成链接</button>
+        <button onclick="testQRGeneration()">测试二维码生成</button>
+        <div class="result" id="result"></div>
+        <div class="qr-code" id="qrcode"></div>
+    </div>
+
+    <script>
+        function generateDirectLink() {
+            try {
+                // 直接生成链接，模拟linkService的逻辑
+                const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}`;
+                const shortCode = 'test' + Math.random().toString(36).substr(2, 10);
+                const projectKey = Math.random().toString(36).substr(2, 32);
+                const complexPart = Math.random().toString(36).substr(2, 96);
+                const sequenceId = '000';
+                
+                // 直接拼接链接
+                const directLink = `${baseUrl}/#/entry/${shortCode}?seq=${sequenceId}&proj=${projectKey}&data=${complexPart}`;
+                
+                document.getElementById('result').innerHTML = `
+                    <div class="success">
+                        <strong>✅ 直接生成的链接：</strong><br>
+                        ${directLink}<br><br>
+                        <strong>链接格式检查：</strong><br>
+                        • 包含 #/ 前缀：${directLink.includes('#/')}<br>
+                        • 正确的路径：${directLink.includes('/entry/')}<br>
+                        • 无多余斜杠：${!directLink.includes('//entry')}<br>
+                    </div>
+                `;
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<strong>❌ 生成失败：</strong>${error.message}`;
+            }
+        }
+
+        function testQRGeneration() {
+            try {
+                // 直接生成测试链接
+                const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}`;
+                const shortCode = 'test' + Math.random().toString(36).substr(2, 10);
+                const projectKey = Math.random().toString(36).substr(2, 32);
+                const complexPart = Math.random().toString(36).substr(2, 96);
+                
+                // 直接拼接正确格式的链接
+                const testLink = `${baseUrl}/#/entry/${shortCode}?seq=000&proj=${projectKey}&data=${complexPart}`;
+                
+                // 生成二维码
+                const encodedLink = encodeURIComponent(testLink);
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedLink}&color=7c3aed&bgcolor=ffffff`;
+                
+                document.getElementById('result').innerHTML = `
+                    <div class="success">
+                        <strong>✅ 测试二维码生成：</strong><br>
+                        <strong>链接：</strong>${testLink}<br><br>
+                        <strong>二维码生成API：</strong><br>
+                        ${qrUrl}
+                    </div>
+                `;
+                
+                document.getElementById('qrcode').innerHTML = `<img src="${qrUrl}" alt="测试二维码">`;
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<strong>❌ 生成失败：</strong>${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -110,7 +110,9 @@ export class LinkService {
       const sequenceId = i.toString().padStart(3, '0'); // 序列ID，确保顺序
       
       // 生成固定长度的复杂链接，包含项目信息和序列ID
-      const fullLink = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}${window.location.pathname.replace(/\/merchant\/?$/, '')}/entry/${shortCode}?seq=${sequenceId}&proj=${projectKey}&data=${complexPart}`;
+      const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}`;
+      // 对于HashRouter，需要包含#/前缀
+      const fullLink = `${baseUrl}/#/entry/${shortCode}?seq=${sequenceId}&proj=${projectKey}&data=${complexPart}`;
       
       this.complexLinks.set(shortCode, fullLink);
       shortCodes.push(shortCode);
@@ -132,7 +134,8 @@ export class LinkService {
     // 如果项目还没有生成链接，生成20个
     if (!shortCodes || shortCodes.length === 0) {
       shortCodes = this.generateLinksForProject(projectId).map(link => {
-        const match = link.match(/\/entry\/(\w+)/);
+        // 匹配包含#和?的链接格式
+        const match = link.match(/\/entry\/([^?]+)/);
         return match ? match[1] : '';
       }).filter(Boolean);
     }
@@ -187,11 +190,19 @@ export class LinkService {
 
   // 根据shortCode获取对应的项目ID
   getProjectIdByShortCode(shortCode: string): string | null {
+    console.log('=== linkService.getProjectIdByShortCode ===');
+    console.log('shortCode:', shortCode);
+    console.log('projectLinks:', Object.fromEntries(this.projectLinks));
+    
     for (const [projectId, shortCodes] of this.projectLinks.entries()) {
+      console.log('检查项目:', projectId, 'shortCodes:', shortCodes);
       if (shortCodes.includes(shortCode)) {
+        console.log('找到匹配的项目ID:', projectId);
         return projectId;
       }
     }
+    
+    console.log('未找到匹配的项目ID');
     return null;
   }
 

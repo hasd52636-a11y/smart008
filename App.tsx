@@ -47,6 +47,7 @@ const LinkEntryHandler: React.FC<{ projects: ProductProject[] }> = ({ projects }
     const handleLinkEntry = async () => {
       console.log('=== 扫码链接处理开始 ===');
       console.log('shortCode:', shortCode);
+      console.log('当前URL:', window.location.href);
       
       if (!shortCode) {
         console.log('shortCode为空，显示错误');
@@ -58,6 +59,11 @@ const LinkEntryHandler: React.FC<{ projects: ProductProject[] }> = ({ projects }
       try {
         setLoading(true);
         setError('');
+        
+        // 检查linkService的状态
+        console.log('linkService状态检查:');
+        console.log('开始查找shortCode对应的项目ID');
+        // 注意：complexLinks和projectLinks是私有属性，无法直接访问
         
         // 根据shortCode获取对应的项目ID
         console.log('查找shortCode对应的项目ID...');
@@ -145,6 +151,7 @@ const LinkEntryHandler: React.FC<{ projects: ProductProject[] }> = ({ projects }
 
   // 项目验证成功，直接渲染用户界面
   if (projectId) {
+    console.log('项目验证成功，渲染UserPreview组件，projectId:', projectId);
     return <UserPreview projects={projects} projectId={projectId} />;
   }
 

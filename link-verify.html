@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>链接验证工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #6d28d9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+        }
+        .success {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>链接验证工具</h1>
+        <input type="text" id="linkInput" placeholder="输入要验证的链接" value="/#/entry/akE3pjDQ?r=dxpwljs20&t=1769924782413&data=ZYKo8sp5rk7wlUSk4dFMolWXJ1376GMy4ndSFeXUxjaXTWgSjkzJQ0in1G7NpiV4">
+        <button onclick="verifyLink()">验证链接</button>
+        <button onclick="generateOurLink()">生成我们的链接</button>
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        function verifyLink() {
+            const link = document.getElementById('linkInput').value;
+            try {
+                // 验证链接格式
+                const fullLink = link.startsWith('http') ? link : `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}${link}`;
+                
+                const hasHashPrefix = fullLink.includes('#/');
+                const hasEntryPath = fullLink.includes('/entry/');
+                const hasShortCode = /\/entry\/([^?]+)/.test(fullLink);
+                
+                document.getElementById('result').innerHTML = `
+                    <div class="${hasHashPrefix && hasEntryPath ? 'success' : 'error'}">
+                        <strong>链接验证结果：</strong><br>
+                        <strong>完整链接：</strong>${fullLink}<br><br>
+                        <strong>格式检查：</strong><br>
+                        • 包含 #/ 前缀：${hasHashPrefix}<br>
+                        • 包含 /entry/ 路径：${hasEntryPath}<br>
+                        • 包含 shortCode：${hasShortCode}<br>
+                        • 链接长度：${fullLink.length} 字符<br><br>
+                        <strong>验证状态：</strong>${hasHashPrefix && hasEntryPath ? '✅ 格式基本正确' : '❌ 格式有问题'}
+                    </div>
+                `;
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<strong>❌ 验证失败：</strong>${error.message}`;
+            }
+        }
+
+        function generateOurLink() {
+            try {
+                // 生成我们系统的链接格式
+                const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}`;
+                const shortCode = 'test' + Math.random().toString(36).substr(2, 10);
+                const projectKey = Math.random().toString(36).substr(2, 32);
+                const complexPart = Math.random().toString(36).substr(2, 96);
+                
+                // 我们系统的链接格式
+                const ourLink = `${baseUrl}/#/entry/${shortCode}?seq=000&proj=${projectKey}&data=${complexPart}`;
+                
+                document.getElementById('result').innerHTML = `
+                    <div class="success">
+                        <strong>✅ 我们系统生成的链接：</strong><br>
+                        ${ourLink}<br><br>
+                        <strong>格式说明：</strong><br>
+                        • 包含 #/ 前缀（HashRouter必需）<br>
+                        • 路径为 /entry/{shortCode}<br>
+                        • 参数：seq（序列ID）、proj（项目密钥）、data（复杂数据）<br>
+                        • 长度：${ourLink.length} 字符
+                    </div>
+                `;
+                
+                // 更新输入框
+                document.getElementById('linkInput').value = ourLink;
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<strong>❌ 生成失败：</strong>${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
