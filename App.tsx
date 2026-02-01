@@ -421,8 +421,8 @@ const App: React.FC = () => {
             </>
           } />
           
-          {/* 公共欢迎页面 - 默认路由 */}
-          <Route path="/" element={<PublicWelcomePage />} />
+          {/* 默认路由 - 重定向到商家后台 */}
+          <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
           
           {/* 商家后台路由 - 需要明确路径访问 */}
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
