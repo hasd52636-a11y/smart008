@@ -64,6 +64,7 @@ export class AIService {
   private realtimeCallbacks: RealtimeCallback[] = [];
   private streamId: string | null = null;
   private isRealtimeConnected: boolean = false;
+  private zhipuApiKey: string = '';
 
   private async zhipuFetch(endpoint: string, body: any, isBinary: boolean = false) {
     try {
@@ -986,6 +987,33 @@ export class AIService {
     probability?: boolean;
   }): Promise<any> {
     return this.recognizeHandwriting(imageFile, options);
+  }
+
+  // 设置智谱API密钥
+  setZhipuApiKey(apiKey: string) {
+    this.zhipuApiKey = apiKey;
+    // 同时保存到localStorage，以便下次使用
+    localStorage.setItem('zhipuApiKey', apiKey);
+  }
+
+  // 获取智谱API密钥
+  getZhipuApiKey(): string {
+    // 优先使用内存中的密钥
+    if (this.zhipuApiKey) {
+      return this.zhipuApiKey;
+    }
+    // 从localStorage获取
+    const savedKey = localStorage.getItem('zhipuApiKey');
+    if (savedKey) {
+      this.zhipuApiKey = savedKey;
+      return savedKey;
+    }
+    // 从环境变量获取（如果在浏览器环境中可用）
+    if (typeof window !== 'undefined' && (window as any).ZHIPU_API_KEY) {
+      this.zhipuApiKey = (window as any).ZHIPU_API_KEY;
+      return this.zhipuApiKey;
+    }
+    return '';
   }
 }
 

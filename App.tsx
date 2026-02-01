@@ -19,7 +19,8 @@ import {
   ArrowLeft,
   Sparkles,
   Video,
-  MessageSquare
+  MessageSquare,
+  AlertCircle
 } from 'lucide-react';
 import { ProductProject, ProjectStatus, ProjectConfig, AIProvider } from './types';
 import { projectService } from './services/projectService';
@@ -39,37 +40,109 @@ import ErrorBoundary from './components/ErrorBoundary';
 const LinkEntryHandler: React.FC<{ projects: ProductProject[] }> = ({ projects }) => {
   const { shortCode } = useParams<{ shortCode: string }>();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
   
   React.useEffect(() => {
-    if (shortCode) {
-      // 根据shortCode获取对应的项目ID
-      const projectId = linkService.getProjectIdByShortCode(shortCode);
+    const handleLinkEntry = async () => {
+      console.log('=== 扫码链接处理开始 ===');
+      console.log('shortCode:', shortCode);
       
-      if (projectId) {
-        // 重定向到对应的产品页面
-        navigate(`/view/${projectId}`);
-      } else {
-        // 如果找不到项目，重定向到首页
+      if (!shortCode) {
+        console.log('shortCode为空，重定向到首页');
         navigate('/');
+        return;
       }
-    } else {
-      // 如果没有shortCode，重定向到首页
-      navigate('/');
-    }
+
+      try {
+        setLoading(true);
+        setError('');
+        
+        // 根据shortCode获取对应的项目ID
+        console.log('查找shortCode对应的项目ID...');
+        const projectId = linkService.getProjectIdByShortCode(shortCode);
+        console.log('找到的项目ID:', projectId);
+        
+        if (projectId) {
+          // 验证项目是否存在且可用
+          console.log('验证项目:', projectId);
+          const validation = await projectService.validateProjectId(projectId);
+          console.log('项目验证结果:', validation);
+          
+          if (validation.valid && validation.project) {
+            console.log('项目验证成功，重定向到用户界面');
+            // 重定向到对应的产品页面
+            navigate(`/view/${projectId}`);
+          } else {
+            console.log('项目验证失败:', validation.error);
+            setError(validation.error || '项目不可用');
+            setLoading(false);
+          }
+        } else {
+          console.log('未找到对应的项目，可能是无效的二维码');
+          setError('无效的二维码或链接已过期');
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('链接处理失败:', error);
+        setError('链接处理失败，请稍后重试');
+        setLoading(false);
+      }
+    };
+
+    handleLinkEntry();
   }, [shortCode, navigate]);
   
   // 显示加载状态
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1a103d] to-[#2d1b69] flex flex-col items-center justify-center p-6">
-      <div className="max-w-md w-full bg-white rounded-[3rem] border-2 border-violet-500/30 p-12 shadow-2xl text-center">
-        <div className="w-16 h-16 bg-violet-500/20 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-          <MessageSquare size={32} />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1a103d] to-[#2d1b69] flex flex-col items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-[3rem] border-2 border-violet-500/30 p-12 shadow-2xl text-center">
+          <div className="w-16 h-16 bg-violet-500/20 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <MessageSquare size={32} />
+          </div>
+          <h2 className="text-2xl font-black text-violet-800 mb-4">正在验证二维码...</h2>
+          <p className="text-slate-600">请稍候，正在为您准备专属服务...</p>
         </div>
-        <h2 className="text-2xl font-black text-violet-800 mb-4">正在进入...</h2>
-        <p className="text-slate-600">请稍候，正在为您准备服务...</p>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // 显示错误状态
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1a103d] to-[#2d1b69] flex flex-col items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-[3rem] border-2 border-red-500/30 p-8 shadow-2xl">
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-red-500/20 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle size={40} />
+            </div>
+            <h1 className="text-2xl font-black text-red-800 mb-4">二维码验证失败</h1>
+            <p className="text-slate-600 text-center mb-4">{error}</p>
+            
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+              <p className="text-sm text-red-800">
+                <strong>可能的原因：</strong><br/>
+                • 二维码已过期或无效<br/>
+                • 产品服务已暂停<br/>
+                • 网络连接问题<br/>
+                • 请联系中恒创世技术支持
+              </p>
+            </div>
+            
+            <button 
+              onClick={() => navigate('/')}
+              className="w-full bg-violet-600 text-white py-3 px-6 rounded-xl font-bold hover:bg-violet-700 transition-colors"
+            >
+              返回首页
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 // 公共欢迎页面组件 - 用户访问根路径时显示
@@ -124,6 +197,37 @@ const PublicWelcomePage: React.FC = () => {
             </div>
           </div>
           
+          {/* 测试链接区域 */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <h4 className="text-sm font-bold text-blue-800 mb-3">🧪 测试扫码功能</h4>
+            <div className="space-y-2">
+              <Link 
+                to="/view/p1" 
+                className="block w-full text-center bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors"
+              >
+                测试项目 - 直接访问
+              </Link>
+              <Link 
+                to="/view/proj_1" 
+                className="block w-full text-center bg-green-600 text-white py-2 px-4 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors"
+              >
+                SmartHome Pro Hub
+              </Link>
+              <Link 
+                to="/view/proj_2" 
+                className="block w-full text-center bg-purple-600 text-white py-2 px-4 rounded-lg text-sm font-bold hover:bg-purple-700 transition-colors"
+              >
+                SmartThermostat
+              </Link>
+              <Link 
+                to="/admin" 
+                className="block w-full text-center bg-amber-600 text-white py-2 px-4 rounded-lg text-sm font-bold hover:bg-amber-700 transition-colors"
+              >
+                商家后台管理
+              </Link>
+            </div>
+          </div>
+          
           <p className="text-sm text-slate-500 mt-8">
             © 2024 中恒创世科技有限公司 版权所有
           </p>
@@ -149,16 +253,16 @@ const Sidebar = ({ projects }: { projects: ProductProject[] }) => {
       </div>
       
       <nav className="flex-1 px-4 space-y-2 mt-4">
-        <SidebarLink to="/" icon={<LayoutDashboard size={20} />} labelEn="Dashboard" labelZh="控制面板" />
-        <SidebarLink to="/projects" icon={<Package size={20} />} labelEn="Products" labelZh="产品管理" />
-        <SidebarLink to="/analytics" icon={<BarChart3 size={20} />} labelEn="Analytics" labelZh="数据分析" />
-        <SidebarLink to="/settings" icon={<SettingsIcon size={20} />} labelEn="API Settings" labelZh="API设置" />
+        <SidebarLink to="/admin/dashboard" icon={<LayoutDashboard size={20} />} labelEn="Dashboard" labelZh="控制面板" />
+        <SidebarLink to="/admin/projects" icon={<Package size={20} />} labelEn="Products" labelZh="产品管理" />
+        <SidebarLink to="/admin/analytics" icon={<BarChart3 size={20} />} labelEn="Analytics" labelZh="数据分析" />
+        <SidebarLink to="/admin/settings" icon={<SettingsIcon size={20} />} labelEn="API Settings" labelZh="API设置" />
         {/* 商家后台专有功能 */}
         <div className="px-5 py-2 mt-4">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">内容管理</span>
         </div>
-        <SidebarLink to="/knowledge" icon={<BookOpen size={20} />} labelEn="Knowledge Base" labelZh="知识库" />
-        <SidebarLink to="/search" icon={<Search size={20} />} labelEn="Smart Search" labelZh="智能搜索" />
+        <SidebarLink to="/admin/knowledge" icon={<BookOpen size={20} />} labelEn="Knowledge Base" labelZh="知识库" />
+        <SidebarLink to="/admin/search" icon={<Search size={20} />} labelEn="Smart Search" labelZh="智能搜索" />
       </nav>
 
       <div className="p-6 border-t border-slate-200">
@@ -317,8 +421,12 @@ const App: React.FC = () => {
             </>
           } />
           
-          {/* 默认重定向到商家后台 */}
-          <Route path="*" element={
+          {/* 公共欢迎页面 - 默认路由 */}
+          <Route path="/" element={<PublicWelcomePage />} />
+          
+          {/* 商家后台路由 - 需要明确路径访问 */}
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/*" element={
             <>
               <Sidebar projects={projects} />
               <div className="flex-1 flex flex-col min-w-0">
@@ -350,7 +458,7 @@ const App: React.FC = () => {
 
                 <main className="p-12 pb-24">
                   <Routes>
-                    <Route path="/" element={<Dashboard projects={projects} />} />
+                    <Route path="/dashboard" element={<Dashboard projects={projects} />} />
                     <Route path="/projects" element={<ProjectList projects={projects} onAdd={addProject} />} />
                     <Route path="/projects/:id" element={<ProjectDetail projects={projects} onUpdate={updateProject} />} />
                     <Route path="/analytics" element={<Analytics />} />
@@ -363,6 +471,9 @@ const App: React.FC = () => {
               </div>
             </>
           } />
+          
+          {/* 未匹配路由重定向到公共欢迎页面 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>

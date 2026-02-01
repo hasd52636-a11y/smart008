@@ -146,6 +146,27 @@ class ProjectService {
 
     // 同时从localStorage加载商家创建的项目
     this.loadProjectsFromLocalStorage();
+    
+    // 为默认项目生成扫码链接（如果还没有的话）
+    this.initializeProjectLinks();
+  }
+
+  // 为项目初始化扫码链接
+  private initializeProjectLinks() {
+    // 导入linkService并为每个项目生成链接
+    import('../services/linkService').then(({ linkService }) => {
+      this.projects.forEach((project, projectId) => {
+        // 检查项目是否已有链接
+        const existingLinks = linkService.getAllLinksForProject(projectId);
+        if (existingLinks.length === 0) {
+          // 为项目生成100个扫码链接
+          console.log(`为项目 ${project.name} (${projectId}) 生成扫码链接...`);
+          linkService.generateLinksForProject(projectId);
+        }
+      });
+    }).catch(error => {
+      console.error('Failed to initialize project links:', error);
+    });
   }
 
   // 从localStorage加载商家创建的项目
@@ -285,6 +306,34 @@ class ProjectService {
     // 这里可以实现用户访问日志
     // 注意：只记录必要的匿名统计信息，不记录个人隐私
     console.log(`User accessed project ${projectId} at ${userInfo?.timestamp}`);
+  }
+
+  // 获取项目的扫码链接
+  public async getProjectQRLinks(projectId: string): Promise<string[]> {
+    return new Promise(async (resolve) => {
+      try {
+        const { linkService } = await import('../services/linkService');
+        const links = linkService.getAllLinksForProject(projectId);
+        resolve(links);
+      } catch (error) {
+        console.error('Failed to get project QR links:', error);
+        resolve([]);
+      }
+    });
+  }
+
+  // 生成项目的下一个可用扫码链接
+  public async getNextQRLink(projectId: string): Promise<string> {
+    return new Promise(async (resolve) => {
+      try {
+        const { linkService } = await import('../services/linkService');
+        const link = linkService.getNextLinkForProject(projectId);
+        resolve(link);
+      } catch (error) {
+        console.error('Failed to get next QR link:', error);
+        resolve('');
+      }
+    });
   }
 }
 
